@@ -37,6 +37,14 @@ class MatrixTodo {
         this.taskInput.addEventListener('input', () => {
             this.updateGhostText();
         });
+
+        this.taskList.addEventListener('dragstart', this.handleDragStart.bind(this));
+        this.taskList.addEventListener('dragend', this.handleDragEnd.bind(this));
+        this.taskList.addEventListener('dragover', this.handleDragOver.bind(this));
+        this.taskList.addEventListener('drop', this.handleDrop.bind(this));
+
+        this.dragStartY = 0;
+        this.lastAnimationFrame = null;
     }
 
     initializeProgressBar() {
@@ -126,7 +134,9 @@ class MatrixTodo {
 
     render() {
         this.taskList.innerHTML = this.tasks.map(task => `
-            <div class="task-item ${task.completed ? 'completed' : ''} ${task.category}" data-id="${task.id}">
+            <div class="task-item ${task.completed ? 'completed' : ''} ${task.category}" 
+                data-id="${task.id}"
+                draggable="true">
                 <button class="delete-btn">×</button>
                 <span>${task.text}</span>
             </div>
@@ -172,6 +182,90 @@ class MatrixTodo {
         } else {
             this.ghostTextElement.textContent = '';
         }
+    }
+
+    handleDragStart(e) {
+        const taskItem = e.target.closest('.task-item');
+        if (!taskItem) return;
+        
+        taskItem.classList.add('dragging', 'lift');
+        this.dragStartY = e.clientY;
+        
+        const dragImage = taskItem.cloneNode(true);
+        dragImage.style.opacity = '0';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, 0, 0);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
+
+        e.dataTransfer.setData('text/plain', taskItem.dataset.id);
+        
+        this.taskList.classList.add('dragging-active');
+        document.body.classList.add('matrix-rain-active');
+    }
+
+    handleDragEnd(e) {
+        const taskItem = e.target.closest('.task-item');
+        if (!taskItem) return;
+        
+        taskItem.classList.remove('dragging', 'lift');
+        this.taskList.classList.remove('dragging-active');
+        document.body.classList.remove('matrix-rain-active');
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        const taskItem = e.target.closest('.task-item');
+        if (!taskItem) return;
+        
+        const draggingItem = this.taskList.querySelector('.dragging');
+        if (draggingItem === taskItem) return;
+        
+        if (this.lastAnimationFrame) {
+            cancelAnimationFrame(this.lastAnimationFrame);
+        }
+        
+        this.lastAnimationFrame = requestAnimationFrame(() => {
+            const rect = taskItem.getBoundingClientRect();
+            const threshold = rect.top + rect.height / 2;
+            
+            const items = this.taskList.querySelectorAll('.task-item');
+            items.forEach(item => item.classList.remove('drop-before', 'drop-after'));
+            
+            if (e.clientY < threshold) {
+                taskItem.classList.add('drop-before');
+                taskItem.parentNode.insertBefore(draggingItem, taskItem);
+            } else {
+                taskItem.classList.add('drop-after');
+                taskItem.parentNode.insertBefore(draggingItem, taskItem.nextSibling);
+            }
+            
+            const containerRect = this.taskList.getBoundingClientRect();
+            const scrollThreshold = 50;
+            
+            if (e.clientY - containerRect.top < scrollThreshold) {
+                this.taskList.scrollBy({ top: -10, behavior: 'smooth' });
+            } else if (containerRect.bottom - e.clientY < scrollThreshold) {
+                this.taskList.scrollBy({ top: 10, behavior: 'smooth' });
+            }
+        });
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        
+        const items = this.taskList.querySelectorAll('.task-item');
+        items.forEach(item => {
+            item.classList.remove('drop-before', 'drop-after');
+        });
+        
+        const newTasks = Array.from(items)
+            .map(item => this.tasks.find(task => task.id === item.dataset.id));
+        
+        this.tasks = newTasks;
+        this.saveTasks();
+        
+        const dropSound = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
+        dropSound.play().catch(() => {});
     }
 }
 

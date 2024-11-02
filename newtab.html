@@ -81,11 +81,10 @@
         }
 
         .task-item {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-size: 24px;
+            cursor: grab;
+            transition: background-color 0.2s ease;
             position: relative;
+            will-change: opacity;
         }
 
         .task-item span {
@@ -191,6 +190,34 @@
             position: relative;
             width: 100%;
             margin-bottom: 32px;
+        }
+
+        /* Subtle drop position indicators */
+        .task-item.drop-before::before,
+        .task-item.drop-after::after {
+            content: '';
+            position: absolute;
+            left: -10px;
+            width: 4px;
+            height: 4px;
+            background: #15FF00;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #15FF00;
+        }
+
+        .task-item.drop-before::before {
+            top: -2px;
+        }
+
+        .task-item.drop-after::after {
+            bottom: -2px;
+        }
+
+        .task-item.dragging {
+            opacity: 0.9;
+            cursor: grabbing;
+            background: rgba(21, 255, 0, 0.1);
+            border: 2px solid rgba(21, 255, 0, 0.5);
         }
     </style>
 </head>
