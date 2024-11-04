@@ -219,10 +219,129 @@
             background: rgba(21, 255, 0, 0.1);
             border: 2px solid rgba(21, 255, 0, 0.5);
         }
+
+        .global-todos {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .global-todo-item {
+            position: absolute;
+            font-size: 0.9rem;
+            color: rgba(21, 255, 0, 0.6);
+            transition: color 0.5s ease;
+        }
+
+        .global-todo-item:hover {
+            color: rgba(21, 255, 0, 0.4);
+        }
+
+        .todo-number {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-bottom: 2px;
+        }
+
+        .todo-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .global-tasks-list {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Add pulse animation */
+        @keyframes pulse {
+            0% { opacity: 0.2; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.2; }
+        }
+
+        .global-todo-item.completed {
+            text-decoration: line-through;
+            opacity: 0.3;
+        }
+
+        .global-todo-item.completed:hover {
+            opacity: 0.2;
+        }
+
+        .global-toggle {
+            position: fixed;
+            bottom: 50px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .global-toggle:hover {
+            opacity: 1;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(21, 255, 0, 0.2);
+            transition: .4s;
+            border: 1px solid rgba(21, 255, 0, 0.5);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #15FF00;
+            transition: .4s;
+            box-shadow: 0 0 10px #15FF00;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(21, 255, 0, 0.4);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
     </style>
 </head>
 <body>
     <canvas id="matrix-bg"></canvas>
+    <div class="global-todos"></div>
+    <iframe id="firebase-sandbox" src="sandbox.html" style="display: none;"></iframe>
     <div class="container">
         <div class="progress-bar"></div>
         <div class="progress-text">0% COMPLETE</div>
@@ -231,6 +350,13 @@
             <div class="ghost-text"></div>
         </div>
         <div class="task-list"></div>
+    </div>
+    <div class="global-toggle">
+        <label class="switch">
+            <input type="checkbox" id="globalTodosToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="toggle-label">FELLOW HACKERS' TASKS</span>
     </div>
     <div class="shortcut-hint">
         CTRL + SHIFT + C TO CLEAR COMPLETED

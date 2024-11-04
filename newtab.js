@@ -45,6 +45,58 @@ class MatrixTodo {
 
         this.dragStartY = 0;
         this.lastAnimationFrame = null;
+
+        this.sandbox = document.getElementById('firebase-sandbox');
+        console.log("Found sandbox iframe:", this.sandbox);
+        
+        // Ensure sandbox is loaded before trying to use it
+        if (this.sandbox.contentDocument.readyState === 'complete') {
+            this.loadTasksFromFirebase();
+        } else {
+            this.sandbox.onload = () => this.loadTasksFromFirebase();
+        }
+
+        this.globalTodosContainer = document.querySelector('.global-todos');
+        console.log("Setting up global todos container:", this.globalTodosContainer);
+        this.loadGlobalTodos();
+        
+        // Refresh global todos every 5 minutes
+        setInterval(() => this.loadGlobalTodos(), 5 * 60 * 1000);
+
+        console.log("🎯 Setting up message listener in main window");
+        window.addEventListener("message", (event) => {
+            console.log("📨 Main window received message:", event.data);
+            console.log("📨 Message origin:", event.origin);
+            
+            if (event.data.type === "globalTodosLoaded") {
+                console.log("📥 Received global todos:", event.data.tasks);
+                this.renderGlobalTodos(event.data.tasks);
+            } else if (event.data.type === "test") {
+                console.log("📥 Received test message:", event.data.message);
+            }
+        });
+
+        this.globalToggle = document.getElementById('globalTodosToggle');
+        this.isGlobalEnabled = localStorage.getItem('globalTodosEnabled') === 'true';
+        this.globalToggle.checked = this.isGlobalEnabled;
+        
+        // Initialize global todos visibility
+        if (!this.isGlobalEnabled) {
+            this.globalTodosContainer.style.display = 'none';
+        }
+
+        // Add toggle event listener
+        this.globalToggle.addEventListener('change', (e) => {
+            this.isGlobalEnabled = e.target.checked;
+            localStorage.setItem('globalTodosEnabled', this.isGlobalEnabled);
+            
+            if (this.isGlobalEnabled) {
+                this.globalTodosContainer.style.display = 'block';
+                this.loadGlobalTodos();
+            } else {
+                this.globalTodosContainer.style.display = 'none';
+            }
+        });
     }
 
     initializeProgressBar() {
@@ -85,32 +137,45 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
-        this.tasks.unshift({
+        const task = {
             id: Date.now().toString(),
             text: text.toUpperCase(),
             completed: false,
             category
-        });
-        this.saveTasks();
+        };
+
+        this.tasks.unshift(task);
+        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+
+        if (this.isGlobalEnabled) {
+            console.log("Adding task to Firebase:", task);
+            this.sandbox.contentWindow.postMessage({ type: "addTask", task }, "*");
+        }
+        
         this.render();
     }
 
     toggleTask(id) {
-        this.tasks = this.tasks.map(task =>
-            task.id === id ? { ...task, completed: !task.completed } : task
-        );
-        this.saveTasks();
+        this.tasks = this.tasks.map(task => {
+            if (task.id === id) {
+                const updatedTask = { ...task, completed: !task.completed };
+                this.sandbox.contentWindow.postMessage({ 
+                    type: "updateTask", 
+                    task: updatedTask 
+                }, "*");
+                return updatedTask;
+            }
+            return task;
+        });
+        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         this.render();
     }
 
     deleteTask(id) {
         this.tasks = this.tasks.filter(task => task.id !== id);
-        this.saveTasks();
-        this.render();
-    }
-
-    saveTasks() {
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: id }, "*");
+        this.render();
     }
 
     updateProgress() {
@@ -147,7 +212,6 @@ class MatrixTodo {
 
     clearCompleted() {
         this.tasks = this.tasks.filter(task => !task.completed);
-        this.saveTasks();
         this.render();
     }
 
@@ -262,10 +326,91 @@ class MatrixTodo {
             .map(item => this.tasks.find(task => task.id === item.dataset.id));
         
         this.tasks = newTasks;
-        this.saveTasks();
+        this.render();
         
         const dropSound = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
         dropSound.play().catch(() => {});
+    }
+
+    loadTasksFromFirebase() {
+        console.log("Loading tasks from Firebase...");
+        this.sandbox.contentWindow.postMessage({ type: "getTasks" }, "*");
+    }
+
+    loadGlobalTodos() {
+        if (!this.isGlobalEnabled) return;
+        
+        console.log("🚀 Requesting global todos...");
+        if (!this.sandbox) {
+            console.error("❌ Sandbox iframe not found!");
+            return;
+        }
+        
+        setTimeout(() => {
+            try {
+                console.log("📤 Sending getGlobalTodos request to sandbox");
+                this.sandbox.contentWindow.postMessage({
+                    type: "getGlobalTodos"
+                }, "*");
+                console.log("✅ Request sent to sandbox");
+            } catch (error) {
+                console.error("❌ Error sending request to sandbox:", error);
+                setTimeout(() => this.loadGlobalTodos(), 1000);
+            }
+        }, 1000);
+    }
+
+    renderGlobalTodos(tasks) {
+        if (!this.todoPositions) {
+            this.todoPositions = new Map();
+        }
+
+        const container = document.querySelector('.global-todos');
+        const tasksList = document.createElement('div');
+        tasksList.className = 'global-tasks-list';
+        
+        tasks.forEach((task, index) => {
+            if (!this.todoPositions.has(task.id)) {
+                this.todoPositions.set(task.id, {
+                    x: Math.random() * (window.innerWidth - 250),
+                    y: Math.random() * (window.innerHeight - 60),
+                    pulseSpeed: 5 + Math.random() * 5,
+                    animationDelay: Math.random() * -10
+                });
+            }
+            
+            const params = this.todoPositions.get(task.id);
+            
+            const todoItem = document.createElement('div');
+            todoItem.className = `global-todo-item ${task.completed ? 'completed' : ''}`;
+            todoItem.style.cssText = `
+                left: ${params.x}px;
+                top: ${params.y}px;
+                animation: pulse ${params.pulseSpeed}s infinite;
+                animation-delay: ${params.animationDelay}s;
+            `;
+            
+            const todoNumber = document.createElement('div');
+            todoNumber.className = 'todo-number';
+            todoNumber.textContent = `${(index + 1).toString().padStart(2, '0')}`;
+            
+            const todoText = document.createElement('div');
+            todoText.className = 'todo-text';
+            todoText.textContent = task.text;
+            
+            todoItem.appendChild(todoNumber);
+            todoItem.appendChild(todoText);
+            tasksList.appendChild(todoItem);
+        });
+        
+        container.innerHTML = '';
+        container.appendChild(tasksList);
+        
+        for (const [id] of this.todoPositions) {
+            if (!tasks.find(task => task.id === id)) {
+                this.todoPositions.delete(id);
+            }
+        }
     }
 }
 
