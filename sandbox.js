@@ -33,7 +33,14 @@ window.addEventListener("message", async (event) => {
     if (event.data.type === "getGlobalTodos") {
         console.log("🔍 Attempting to fetch global todos");
         try {
-            const snapshot = await db.collection("tasks").get();
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+
+            const snapshot = await db.collection("tasks")
+                .where("timestamp", ">=", new Date(startOfDay))
+                .where("timestamp", "<", new Date(endOfDay))
+                .get();
             
             console.log("📊 Raw snapshot:", snapshot);
             console.log("📊 Snapshot size:", snapshot.size);
@@ -67,9 +74,10 @@ window.addEventListener("message", async (event) => {
     else if (event.data.type === "addTask") {
         console.log("Adding task to Firebase:", event.data.task);
         try {
+            const timestamp = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection("tasks").add({
                 ...event.data.task,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp
             });
             console.log("Task added successfully");
         } catch (error) {

@@ -212,6 +212,10 @@ class MatrixTodo {
 
     clearCompleted() {
         this.tasks = this.tasks.filter(task => !task.completed);
+        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        this.tasks.forEach(task => {
+            this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: task.id }, "*");
+        });
         this.render();
     }
 
