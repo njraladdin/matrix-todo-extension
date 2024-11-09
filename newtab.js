@@ -400,8 +400,10 @@ class MatrixTodo {
         
         tasks.forEach((task, index) => {
             if (!this.todoPositions.has(task.id)) {
+                const minX = window.innerWidth * 0.3;
+                const maxX = window.innerWidth - 250;
                 this.todoPositions.set(task.id, {
-                    x: Math.random() * (window.innerWidth - 250),
+                    x: minX + Math.random() * (maxX - minX),
                     y: Math.random() * (window.innerHeight - 60),
                     pulseSpeed: 5 + Math.random() * 5,
                     animationDelay: Math.random() * -10
