@@ -400,13 +400,55 @@ class MatrixTodo {
         const tasksList = document.createElement('div');
         tasksList.className = 'global-tasks-list';
         
+        const minSpacing = 80; // Minimum pixels between todos
+        const todoWidth = 250; // Maximum width of a todo item
+        const todoHeight = 60; // Approximate height of a todo item
+        
+        const findValidPosition = () => {
+            const maxAttempts = 50;
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                const minX = window.innerWidth * 0.3;
+                const maxX = window.innerWidth - todoWidth;
+                const x = minX + Math.random() * (maxX - minX);
+                const y = Math.random() * (window.innerHeight - todoHeight);
+                
+                // Check if this position conflicts with any existing todos
+                let hasConflict = false;
+                for (const pos of this.todoPositions.values()) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - pos.x, 2) + 
+                        Math.pow(y - pos.y, 2)
+                    );
+                    if (distance < minSpacing) {
+                        hasConflict = true;
+                        break;
+                    }
+                }
+                
+                if (!hasConflict) {
+                    return { x, y };
+                }
+                attempts++;
+            }
+            
+            // If we couldn't find a non-conflicting position, use a grid-based fallback
+            const index = this.todoPositions.size;
+            const itemsPerRow = Math.floor((window.innerWidth - window.innerWidth * 0.3) / (todoWidth + minSpacing));
+            const row = Math.floor(index / itemsPerRow);
+            const col = index % itemsPerRow;
+            return {
+                x: (window.innerWidth * 0.3) + col * (todoWidth + minSpacing),
+                y: row * (todoHeight + minSpacing)
+            };
+        };
+        
         tasks.forEach((task, index) => {
             if (!this.todoPositions.has(task.id)) {
-                const minX = window.innerWidth * 0.3;
-                const maxX = window.innerWidth - 250;
+                const position = findValidPosition();
                 this.todoPositions.set(task.id, {
-                    x: minX + Math.random() * (maxX - minX),
-                    y: Math.random() * (window.innerHeight - 60),
+                    ...position,
                     pulseSpeed: 5 + Math.random() * 5,
                     animationDelay: Math.random() * -10
                 });
@@ -439,6 +481,7 @@ class MatrixTodo {
         container.innerHTML = '';
         container.appendChild(tasksList);
         
+        // Clean up positions for removed todos
         for (const [id] of this.todoPositions) {
             if (!tasks.find(task => task.id === id)) {
                 this.todoPositions.delete(id);
