@@ -97,6 +97,27 @@ class MatrixTodo {
                 this.globalTodosContainer.style.display = 'none';
             }
         });
+
+        // Update the initial placeholder styling with reduced glow
+        this.taskInput.style.color = 'var(--matrix-green)';
+        this.taskInput.style.textShadow = `
+            0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+            0 0 4px rgba(var(--matrix-green-rgb), 0.4),
+            0 0 6px rgba(var(--matrix-green-rgb), 0.2)
+        `;
+
+        // Add input event to maintain consistent styling
+        this.taskInput.addEventListener('input', () => {
+            this.updateGhostText();
+            if (!this.taskInput.value) {
+                this.taskInput.style.color = 'var(--matrix-green)';
+                this.taskInput.style.textShadow = `
+                    0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+                    0 0 4px rgba(var(--matrix-green-rgb), 0.4),
+                    0 0 6px rgba(var(--matrix-green-rgb), 0.2)
+                `;
+            }
+        });
     }
 
     initializeProgressBar() {
@@ -225,9 +246,13 @@ class MatrixTodo {
         if (inputText.includes('!urgent')) {
             this.taskInput.style.color = '#FFD700';
             this.taskInput.style.textShadow = '0 0 5px rgba(255, 215, 0, 0.5)';
-        } else {
-            this.taskInput.style.color = '#15FF00';
-            this.taskInput.style.textShadow = 'none';
+        } else if (inputText) {  // Only change style if there's input
+            this.taskInput.style.color = 'var(--matrix-green)';
+            this.taskInput.style.textShadow = `
+                0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+                0 0 4px rgba(var(--matrix-green-rgb), 0.4),
+                0 0 6px rgba(var(--matrix-green-rgb), 0.2)
+            `;
         }
         
         if (inputText && !inputText.includes('!urgent')) {
