@@ -355,6 +355,8 @@ class MatrixTodo {
             .map(item => this.tasks.find(task => task.id === item.dataset.id));
         
         this.tasks = newTasks;
+        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        
         this.render();
         
         const dropSound = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
