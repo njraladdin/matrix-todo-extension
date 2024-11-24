@@ -176,7 +176,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            font-size: 12px;
+            font-size: 10px;
             opacity: 0.5;
         }
 
@@ -187,7 +187,7 @@
 
         .attribution a {
             color: var(--matrix-green);
-            text-decoration: none;
+            text-decoration: underline;
             text-shadow: 
                 0 0 2px rgba(var(--matrix-green-rgb), 0.9),
                 0 0 4px rgba(var(--matrix-green-rgb), 0.7),
@@ -195,7 +195,7 @@
         }
 
         .attribution a:hover {
-            text-decoration: underline;
+            text-decoration: none;
         }
 
         .ghost-text {
@@ -446,6 +446,153 @@
             z-index: 998;
             animation: flicker 7s infinite;
         }
+
+        .notes-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .note-item {
+            position: fixed;
+            background: rgba(var(--matrix-green-rgb), 0.015);
+            border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+            padding: 16px;
+            min-width: 400px;
+            width: 400px;
+            pointer-events: auto;
+            cursor: default;
+            visibility: hidden;
+            will-change: transform;
+            z-index: 11;
+            box-shadow: 
+                0 0 20px rgba(0, 0, 0, 0.2),
+                inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05),
+                0 0 2px rgba(var(--matrix-green-rgb), 0.03);
+        }
+
+        .note-header {
+            padding: 0 0 8px 0;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.3;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .note-item textarea {
+            width: 100%;
+            min-height: 120px;
+            height: auto;
+            background: transparent;
+            border: none;
+            color: var(--matrix-green);
+            font-family: monospace;
+            font-size: 20px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            cursor: text;
+            opacity: 0.8;
+            text-shadow: 
+                0 0 2px rgba(var(--matrix-green-rgb), 0.3),
+                0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+        }
+
+        .note-item .delete-note {
+            background: none;
+            border: none;
+            color: var(--matrix-green);
+            cursor: pointer;
+            opacity: 0.3;
+            font-size: 14px;
+            padding: 4px 8px;
+            transition: opacity 0.2s;
+        }
+
+        .note-item .delete-note:hover {
+            opacity: 0.6;
+        }
+
+        /* Even more minimal drag indicator */
+        .note-item::after {
+            content: "···";
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            color: var(--matrix-green);
+            opacity: 0.4;
+            cursor: move;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-shadow: 
+                0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+                0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+        }
+
+        .note-item:hover::after {
+            opacity: 0.8;
+        }
+
+        .updates-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+            padding: 24px;
+            z-index: 1000;
+            width: 300px;
+            box-shadow: 
+                0 0 40px rgba(0, 0, 0, 0.6),
+                inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05);
+        }
+
+        .updates-popup h2 {
+            color: var(--matrix-green);
+            margin-bottom: 20px;
+            font-size: 16px;
+            letter-spacing: 2px;
+            opacity: 0.9;
+            text-shadow: 
+                0 0 2px rgba(var(--matrix-green-rgb), 0.4);
+        }
+
+        .updates-popup p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 12px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            text-shadow: none;
+        }
+
+        .updates-popup button {
+            background: none;
+            border: 1px solid rgba(var(--matrix-green-rgb), 0.2);
+            color: var(--matrix-green);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 12px;
+            letter-spacing: 2px;
+            width: 100%;
+            transition: all 0.2s ease;
+            opacity: 0.8;
+        }
+
+        .updates-popup button:hover {
+            background: rgba(var(--matrix-green-rgb), 0.05);
+            border-color: rgba(var(--matrix-green-rgb), 0.3);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -460,18 +607,28 @@
             <div class="ghost-text"></div>
         </div>
         <div class="task-list"></div>
+        <div class="notes-overlay"></div>
+        <div class="updates-popup" style="display: none;">
+            <h2>SYSTEM UPDATE</h2>
+            <div class="update-content">
+                <p>NEW: FLOATING NOTES</p>
+                <p>• RIGHT-CLICK TO CREATE</p>
+                <p>• DRAG TO REPOSITION</p>
+                <p>• AUTO-SAVE ENABLED</p>
+            </div>
+            <button id="closeUpdates">INITIALIZE</button>
+        </div>
     </div>
     <div class="global-toggle">
         <label class="switch">
             <input type="checkbox" id="globalTodosToggle">
             <span class="slider"></span>
         </label>
-        <span class="toggle-label">FELLOW HACKERS' TASKS</span>
+        <span class="toggle-label">SHOW ANONYMOUS TODOS</span>
     </div>
     <div class="shortcut-hint">
         CTRL + SHIFT + C TO CLEAR COMPLETED
         <span class="attribution">• made by <a href="https://x.com/aladdinnjr" target="_blank">@aladdinnjr</a></span>
-        <span class="attribution">• based on <a href="https://x.com/joshuawolk/status/1850408475643502847" target="_blank">@joshuawolk</a></span>
     </div>
     <script src="matrix-bg.js"></script>
     <script src="newtab.js"></script>

@@ -11,7 +11,16 @@ class MatrixTodo {
         this.taskInput.focus();
 
         document.body.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('delete-btn')) {
+            const isNoteItem = e.target.closest('.note-item');
+            const isDeleteBtn = e.target.classList.contains('delete-btn');
+            
+            console.log('Click detected:', {
+                isNoteItem,
+                isDeleteBtn,
+                target: e.target
+            });
+
+            if (!isNoteItem && !isDeleteBtn) {
                 this.taskInput.focus();
             }
         });
@@ -118,6 +127,20 @@ class MatrixTodo {
                 `;
             }
         });
+
+        // Update notes initialization
+        this.notes = JSON.parse(localStorage.getItem('matrix-notes')) || [];
+        this.notesOverlay = document.querySelector('.notes-overlay');
+        this.renderNotes();
+
+        // Add message listener for context menu
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (request.action === "addNote") {
+                this.addNote();
+            }
+        });
+
+        this.checkForUpdates();
     }
 
     initializeProgressBar() {
@@ -487,6 +510,365 @@ class MatrixTodo {
                 this.todoPositions.delete(id);
             }
         }
+    }
+
+    addNote() {
+        // Calculate center position for new note
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const noteWidth = 400; // Width defined in CSS
+        const noteHeight = 200; // Approximate default height
+        
+        const note = {
+            id: Date.now().toString(),
+            content: '',
+            timestamp: new Date().toISOString(),
+            position: {
+                x: (viewportWidth - noteWidth) / 2,
+                y: (viewportHeight - noteHeight) / 2
+            }
+        };
+        
+        this.notes.unshift(note);
+        this.saveNotes();
+        this.renderNotes();
+        
+        // Focus the newly added note
+        const firstTextarea = this.notesOverlay.querySelector('textarea');
+        if (firstTextarea) {
+            firstTextarea.focus();
+        }
+    }
+
+    initializeDragging(noteElement) {
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const dragStart = (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+            
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            if (e.target === noteElement || e.target.parentNode === noteElement) {
+                isDragging = true;
+            }
+        };
+
+        const dragEnd = () => {
+            if (!isDragging) return;
+            
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+
+            // Save the final position
+            const noteId = noteElement.dataset.id;
+            const note = this.notes.find(n => n.id === noteId);
+            if (note) {
+                note.position = { x: xOffset, y: yOffset };
+                this.saveNotes();
+            }
+        };
+
+        const drag = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            xOffset = currentX;
+            yOffset = currentY;
+
+            setTranslate(currentX, currentY, noteElement);
+        };
+
+        const setTranslate = (xPos, yPos, el) => {
+            // Get viewport dimensions
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Get note dimensions
+            const noteRect = el.getBoundingClientRect();
+            const noteWidth = noteRect.width;
+            const noteHeight = noteRect.height;
+            
+            // Constrain position within viewport bounds
+            xPos = Math.max(0, Math.min(xPos, viewportWidth - noteWidth));
+            yPos = Math.max(0, Math.min(yPos, viewportHeight - noteHeight));
+            
+            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        };
+
+        // Set initial position
+        const noteId = noteElement.dataset.id;
+        const note = this.notes.find(n => n.id === noteId);
+        if (note && note.position) {
+            xOffset = note.position.x;
+            yOffset = note.position.y;
+            setTranslate(xOffset, yOffset, noteElement);
+        }
+
+        noteElement.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+    }
+
+    renderNotes() {
+        console.log('🎨 Starting renderNotes');
+        console.log('Current notes:', this.notes);
+        
+        if (!this.notesOverlay) {
+            console.error('❌ Notes overlay element not found!');
+            return;
+        }
+        
+        // Modify the note HTML structure slightly
+        const html = this.notes.map(note => {
+            const position = note.position || { x: 0, y: 0 };
+            console.log('📝 Rendering note:', { id: note.id, position });
+            return `
+                <div class="note-item" 
+                    data-id="${note.id}" 
+                    style="visibility: visible; transform: translate(${position.x}px, ${position.y}px);">
+                    <div class="note-header">
+                        <span class="note-timestamp">${new Date(note.timestamp).toLocaleString()}</span>
+                        <button class="delete-note">×</button>
+                    </div>
+                    <textarea placeholder="ENTER NOTE">${note.content || ''}</textarea>
+                    <div class="note-drag-handle"></div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Generated HTML:', html);
+        this.notesOverlay.innerHTML = html;
+
+        // Initialize dragging for each note
+        const noteElements = this.notesOverlay.querySelectorAll('.note-item');
+        console.log('Found note elements:', noteElements.length);
+
+        noteElements.forEach(noteEl => {
+            this.initializeDragging(noteEl);
+            
+            // Make sure note is visible and within bounds
+            const noteId = noteEl.dataset.id;
+            const note = this.notes.find(n => n.id === noteId);
+            if (note && note.position) {
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const noteRect = noteEl.getBoundingClientRect();
+                
+                note.position.x = Math.max(0, Math.min(note.position.x, viewportWidth - noteRect.width));
+                note.position.y = Math.max(0, Math.min(note.position.y, viewportHeight - noteRect.height));
+                
+                noteEl.style.transform = `translate(${note.position.x}px, ${note.position.y}px)`;
+            }
+            
+            noteEl.style.visibility = 'visible';
+        });
+
+        // Add event listeners for textareas
+        this.notesOverlay.querySelectorAll('textarea').forEach(textarea => {
+            // Add this function to automatically adjust height
+            const adjustHeight = (el) => {
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+            };
+
+            // Initial height adjustment
+            adjustHeight(textarea);
+
+            textarea.addEventListener('input', (e) => {
+                const noteId = e.target.closest('.note-item').dataset.id;
+                const note = this.notes.find(n => n.id === noteId);
+                if (note) {
+                    note.content = e.target.value;
+                    this.saveNotes();
+                    // Adjust height on input
+                    adjustHeight(e.target);
+                }
+            });
+
+            // Prevent task input focus when clicking textarea
+            textarea.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
+
+        // Add event listeners for delete buttons
+        this.notesOverlay.querySelectorAll('.delete-note').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const noteId = e.target.closest('.note-item').dataset.id;
+                this.deleteNote(noteId);
+            });
+        });
+    }
+
+    deleteNote(id) {
+        this.notes = this.notes.filter(note => note.id !== id);
+        this.saveNotes();
+        this.renderNotes();
+    }
+
+    saveNotes() {
+        localStorage.setItem('matrix-notes', JSON.stringify(this.notes));
+    }
+
+    checkForUpdates() {
+        const updates = {
+            '1.1.1': {
+                id: 'notes-update',
+                title: 'NEW FEATURES AVAILABLE (v1.1.1)',
+                features: [
+                    'Introducing Notes:',
+                    '• Right-click anywhere to create floating notes',
+                    '• Drag notes to reposition them'
+                ],
+                preview: `
+                    <style>
+                        .feature-preview {
+                            margin: 24px 0;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                        }
+
+                        .context-menu-preview {
+                            background: rgb(255, 255, 255);
+                            border: 1px solid rgb(185, 185, 185);
+                            padding: 4px 0;
+                            width: 200px;
+                            position: relative;
+                            animation: fadeIn 0.3s ease;
+                            border-radius: 4px;
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                        }
+
+                        .menu-item {
+                            padding: 6px 24px;
+                            position: relative;
+                            color: rgb(33, 33, 33);
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                            font-size: 13px;
+                            cursor: default;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                                                        text-shadow: none;
+
+                        }
+
+                        .menu-item img {
+                            width: 16px;
+                            height: 16px;
+                        }
+
+                        .menu-item.separator {
+                            height: 1px;
+                            background: rgb(225, 225, 225);
+                            margin: 4px 0;
+                            padding: 0;
+                        }
+
+                        .menu-item.highlight {
+                            background: rgb(47, 129, 247);
+                            color: white;
+                        }
+
+                        .cursor {
+                            width: 12px;
+                            height: 12px;
+                            border: 2px solid rgba(0, 0, 0, 0.5);
+                            border-radius: 50%;
+                            position: absolute;
+                            right: 8px;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            opacity: 0;
+                            animation: cursorMove 2s infinite;
+                        }
+
+                        @keyframes cursorMove {
+                            0% { opacity: 0; transform: translate(-20px, -50%); }
+                            20% { opacity: 1; transform: translate(-20px, -50%); }
+                            40% { opacity: 1; transform: translateY(-50%); }
+                            60% { opacity: 1; transform: translateY(-50%); }
+                            80% { opacity: 0; transform: translateY(-50%); }
+                            100% { opacity: 0; transform: translateY(-50%); }
+                        }
+
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                    </style>
+                    <div class="feature-preview">
+                        <div class="context-menu-preview">
+                            <div class="menu-item">Back</div>
+                            <div class="menu-item">Forward</div>
+                            <div class="menu-item">Reload</div>
+                            <div class="menu-item">Save page as...</div>
+                            <div class="menu-item">Print...</div>
+                            <div class="menu-item separator"></div>
+                            <div class="menu-item">View page source</div>
+                            <div class="menu-item">Inspect</div>
+                            <div class="menu-item separator"></div>
+                            <div class="menu-item highlight">
+                                <img src="icons/icon16.png" alt="Matrix Todo">
+                                <span>Add Matrix Note</span>
+                                <div class="cursor"></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        };
+
+        // Get seen updates from localStorage
+        const seenUpdates = JSON.parse(localStorage.getItem('matrix-todo-seen-updates') || '{}');
+        
+        // Find the first unseen update
+        const currentVersion = '1.1.1'; // Match with manifest.json
+        const unseenUpdate = Object.entries(updates).find(([version, update]) => {
+            return version <= currentVersion && !seenUpdates[update.id];
+        });
+
+        if (unseenUpdate) {
+            const [version, update] = unseenUpdate;
+            this.showUpdatePopup(update, () => {
+                // Mark this update as seen
+                seenUpdates[update.id] = true;
+                localStorage.setItem('matrix-todo-seen-updates', JSON.stringify(seenUpdates));
+            });
+        }
+    }
+
+    showUpdatePopup(update, onClose) {
+        const popup = document.querySelector('.updates-popup');
+        if (!popup) return;
+
+        // Update popup content
+        popup.innerHTML = `
+            <h2>${update.title}</h2>
+            ${update.features.map(feature => `<p>${feature}</p>`).join('')}
+            ${update.preview}
+            <button id="closeUpdates">GOT IT</button>
+        `;
+
+        popup.style.display = 'block';
+
+        const closeButton = document.getElementById('closeUpdates');
+        closeButton.addEventListener('click', () => {
+            popup.style.display = 'none';
+            onClose();
+        });
     }
 }
 
