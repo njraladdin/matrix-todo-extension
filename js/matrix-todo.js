@@ -210,9 +210,9 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
-        // Update regex to include hyphens in group names
+        // Update regex to include hyphens in group names and normalize to uppercase
         const groupMatch = text.match(/#([\w-]+)/);
-        const group = groupMatch ? groupMatch[1].toLowerCase() : null;
+        const group = groupMatch ? groupMatch[1].toUpperCase() : null;
         text = text.replace(/#[\w-]+/, '').trim();
 
         const task = {
@@ -279,18 +279,24 @@ class MatrixTodo {
     }
 
     render() {
-        // Group tasks
+        // Group tasks and normalize group names
         const groupedTasks = this.tasks.reduce((acc, task) => {
-            const group = task.group || 'UNGROUPED';
+            const group = task.group ? task.group.toUpperCase() : 'UNGROUPED';
             if (!acc[group]) acc[group] = [];
             acc[group].push(task);
             return acc;
         }, {});
 
+        // Remove empty groups (except UNGROUPED)
+        Object.keys(groupedTasks).forEach(group => {
+            if (group !== 'UNGROUPED' && groupedTasks[group].length === 0) {
+                delete groupedTasks[group];
+            }
+        });
+
         // Generate HTML for each group
         const html = Object.entries(groupedTasks)
             .map(([group, tasks]) => {
-                // Check if all tasks in the group are completed
                 const isGroupCompleted = tasks.length > 0 && tasks.every(task => task.completed);
                 
                 return `
@@ -433,33 +439,25 @@ class MatrixTodo {
         // Find the new group by looking upward through previous siblings
         const findGroup = (element) => {
             let current = element;
-            console.log('Starting group search from:', current);
             while (current) {
                 // If we find a task that's not grouped, stop searching
                 if (current.classList.contains('task-item') && 
                     !current.classList.contains('grouped-task') && 
                     current !== element) {
-                    console.log('Found ungrouped task, stopping search');
                     return null;
                 }
                 
                 if (current.classList.contains('group-header')) {
-                    console.log('Found group header:', current.textContent);
-                    return current.textContent.toLowerCase();
+                    // Normalize group name to uppercase to maintain consistency
+                    return current.textContent.trim().toUpperCase();
                 }
                 current = current.previousElementSibling;
-                console.log('Moving to previous sibling:', current);
             }
-            console.log('No group found, task will be ungrouped');
             return null;
         };
         
         const newGroup = findGroup(droppedTask);
         const taskId = droppedTask.dataset.id;
-        
-        console.log('Task ID:', taskId);
-        console.log('New group:', newGroup);
-        console.log('Current classes:', droppedTask.classList.toString());
         
         // Get the new order of all tasks from the DOM
         const newTaskOrder = Array.from(this.taskList.querySelectorAll('.task-item'))
@@ -467,13 +465,15 @@ class MatrixTodo {
                 const id = item.dataset.id;
                 const task = this.tasks.find(t => t.id === id);
                 const isDroppedTask = id === taskId;
-                console.log(`Task ${id}:`, isDroppedTask ? '(dropped task)' : '', 
-                           'Old group:', task.group, 
-                           'New group:', isDroppedTask ? newGroup : task.group);
-                return {
-                    ...task,
-                    group: isDroppedTask ? newGroup : task.group
-                };
+                
+                // For the dropped task, normalize the group name
+                if (isDroppedTask && newGroup) {
+                    return {
+                        ...task,
+                        group: newGroup
+                    };
+                }
+                return task;
             });
         
         // Update tasks array with new order and group
@@ -481,15 +481,14 @@ class MatrixTodo {
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         
         // Update classes based on new group status
-        console.log('Updating classes. New group:', newGroup);
         if (newGroup) {
-            console.log('Adding grouped-task class');
             droppedTask.classList.add('grouped-task');
         } else {
-            console.log('Removing grouped-task class');
             droppedTask.classList.remove('grouped-task');
         }
-        console.log('Final classes:', droppedTask.classList.toString());
+
+        // Force a re-render to ensure consistent grouping
+        this.render();
     }
 
     loadTasksFromFirebase() {
