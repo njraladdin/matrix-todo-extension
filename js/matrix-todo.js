@@ -921,13 +921,14 @@ class MatrixTodo {
 
         const groupPrefix = inputText.slice(hashIndex + 1).toLowerCase();
         
-        // Get existing groups from tasks
+        // Get existing groups from tasks and normalize them
         const existingGroups = [...new Set(this.tasks
             .map(task => task.group)
             .filter(group => group) // Remove null/undefined
+            .map(group => group.toUpperCase()) // Normalize all groups to uppercase
         )];
         
-        // Filter groups that match the current input
+        // Filter groups that match the current input (case-insensitive)
         const matchingGroups = existingGroups
             .filter(group => group.toLowerCase().startsWith(groupPrefix))
             .slice(0, 5); // Limit to 5 suggestions
