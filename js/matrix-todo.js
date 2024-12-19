@@ -1,3 +1,5 @@
+import UpdateManager from './update-manager.js';
+
 class MatrixTodo {
     constructor() {
         this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
@@ -27,13 +29,6 @@ class MatrixTodo {
 
         this.bindEvents();
         this.render();
-
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
-                e.preventDefault();
-                this.clearCompleted();
-            }
-        });
 
         this.currentCategory = 'normal';
 
@@ -86,15 +81,13 @@ class MatrixTodo {
         });
 
         this.globalToggle = document.getElementById('globalTodosToggle');
-        this.isGlobalEnabled = localStorage.getItem('globalTodosEnabled') === 'true';
+        this.isGlobalEnabled = localStorage.getItem('globalTodosEnabled') !== 'false';
         this.globalToggle.checked = this.isGlobalEnabled;
         
-        // Initialize global todos visibility
         if (!this.isGlobalEnabled) {
             this.globalTodosContainer.style.display = 'none';
         }
 
-        // Add toggle event listener
         this.globalToggle.addEventListener('change', (e) => {
             this.isGlobalEnabled = e.target.checked;
             localStorage.setItem('globalTodosEnabled', this.isGlobalEnabled);
@@ -140,7 +133,34 @@ class MatrixTodo {
             }
         });
 
-        this.checkForUpdates();
+        this.updateManager = new UpdateManager();
+        this.updateManager.checkForUpdates();
+
+        // Add keyboard shortcut for clearing completed tasks
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+                e.preventDefault();
+                this.clearCompleted();
+            }
+        });
+
+        this.taskHistory = JSON.parse(localStorage.getItem('matrix-tasks-history')) || {};
+        
+        this.initializeSettings();
+
+        // Add new property for suggestions dropdown
+        this.suggestionsDropdown = document.createElement('div');
+        this.suggestionsDropdown.className = 'group-suggestions';
+        this.taskInput.parentNode.insertBefore(this.suggestionsDropdown, this.taskInput.nextSibling);
+        
+        // Add input event listener for suggestions
+        this.taskInput.addEventListener('input', () => {
+            this.updateGhostText();
+            this.showGroupSuggestions();
+        });
+
+        // Add keyboard navigation for suggestions
+        this.taskInput.addEventListener('keydown', this.handleSuggestionNavigation.bind(this));
     }
 
     initializeProgressBar() {
@@ -181,18 +201,26 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
+        // Extract group and clean text
+        const groupMatch = text.match(/#(\w+)/);
+        const group = groupMatch ? groupMatch[1].toLowerCase() : null;
+        text = text.replace(/#\w+/, '').trim();
+
         const task = {
             id: Date.now().toString(),
             text: text.toUpperCase(),
             completed: false,
-            category
+            category,
+            group,
+            timestamp: new Date().toISOString()
         };
 
         this.tasks.unshift(task);
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
 
+        this.addToHistory(task);
+
         if (this.isGlobalEnabled) {
-            console.log("Adding task to Firebase:", task);
             this.sandbox.contentWindow.postMessage({ type: "addTask", task }, "*");
         }
         
@@ -242,25 +270,30 @@ class MatrixTodo {
     }
 
     render() {
-        this.taskList.innerHTML = this.tasks.map(task => `
-            <div class="task-item ${task.completed ? 'completed' : ''} ${task.category}" 
-                data-id="${task.id}"
-                draggable="true">
-                <button class="delete-btn">×</button>
-                <span>${task.text}</span>
-            </div>
-        `).join('');
-        
-        this.updateProgress();
-    }
+        // Group tasks
+        const groupedTasks = this.tasks.reduce((acc, task) => {
+            const group = task.group || 'UNGROUPED';
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(task);
+            return acc;
+        }, {});
 
-    clearCompleted() {
-        this.tasks = this.tasks.filter(task => !task.completed);
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
-        this.tasks.forEach(task => {
-            this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: task.id }, "*");
-        });
-        this.render();
+        // Generate HTML for each group
+        const html = Object.entries(groupedTasks)
+            .map(([group, tasks]) => `
+                ${group !== 'UNGROUPED' ? `<div class="group-header">${group}</div>` : ''}
+                ${tasks.map(task => `
+                    <div class="task-item ${task.completed ? 'completed' : ''} ${task.category} ${task.group ? 'grouped-task' : ''}" 
+                        data-id="${task.id}"
+                        draggable="true">
+                        <button class="delete-btn">×</button>
+                        <span>${task.text}</span>
+                    </div>
+                `).join('')}
+            `).join('');
+
+        this.taskList.innerHTML = html;
+        this.updateProgress();
     }
 
     updateGhostText() {
@@ -269,7 +302,7 @@ class MatrixTodo {
         if (inputText.includes('!urgent')) {
             this.taskInput.style.color = '#FFD700';
             this.taskInput.style.textShadow = '0 0 5px rgba(255, 215, 0, 0.5)';
-        } else if (inputText) {  // Only change style if there's input
+        } else if (inputText) {
             this.taskInput.style.color = 'var(--matrix-green)';
             this.taskInput.style.textShadow = `
                 0 0 2px rgba(var(--matrix-green-rgb), 0.6),
@@ -277,24 +310,32 @@ class MatrixTodo {
                 0 0 6px rgba(var(--matrix-green-rgb), 0.2)
             `;
         }
-        
-        if (inputText && !inputText.includes('!urgent')) {
-            if (inputText.endsWith('!')) {
-                this.ghostTextElement.textContent = inputText + 'urgent';
-            } else if (inputText.endsWith('!u')) {
-                this.ghostTextElement.textContent = inputText + 'rgent';
-            } else if (inputText.endsWith('!ur')) {
-                this.ghostTextElement.textContent = inputText + 'gent';
-            } else if (inputText.endsWith('!urg')) {
-                this.ghostTextElement.textContent = inputText + 'ent';
-            } else if (inputText.endsWith('!urge')) {
-                this.ghostTextElement.textContent = inputText + 'nt';
-            } else if (inputText.endsWith('!urgen')) {
-                this.ghostTextElement.textContent = inputText + 't';
-            } else {
-                const suggestion = inputText.endsWith(' ') ? '!urgent' : ' !urgent';
-                this.ghostTextElement.textContent = inputText + suggestion;
-            }
+
+        // Handle !urgent suggestions
+        if (inputText.endsWith('!')) {
+            this.ghostTextElement.textContent = inputText + 'urgent';
+        } else if (inputText.endsWith('!u')) {
+            this.ghostTextElement.textContent = inputText + 'rgent';
+        } else if (inputText.endsWith('!ur')) {
+            this.ghostTextElement.textContent = inputText + 'gent';
+        } else if (inputText.endsWith('!urg')) {
+            this.ghostTextElement.textContent = inputText + 'ent';
+        } else if (inputText.endsWith('!urge')) {
+            this.ghostTextElement.textContent = inputText + 'nt';
+        } else if (inputText.endsWith('!urgen')) {
+            this.ghostTextElement.textContent = inputText + 't';
+        } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('#')) {
+            // Show both suggestions if neither exists
+            const suggestion = inputText.endsWith(' ') ? '!urgent #group_name' : ' !urgent #group_name';
+            this.ghostTextElement.textContent = inputText + suggestion;
+        } else if (inputText && !inputText.includes('!urgent')) {
+            // Show only !urgent if # exists but !urgent doesn't
+            const suggestion = inputText.endsWith(' ') ? '!urgent' : ' !urgent';
+            this.ghostTextElement.textContent = inputText + suggestion;
+        } else if (inputText && !inputText.includes('#')) {
+            // Show only #group_name if !urgent exists but # doesn't
+            const suggestion = inputText.endsWith(' ') ? '#group_name' : ' #group_name';
+            this.ghostTextElement.textContent = inputText + suggestion;
         } else {
             this.ghostTextElement.textContent = '';
         }
@@ -331,37 +372,33 @@ class MatrixTodo {
     handleDragOver(e) {
         e.preventDefault();
         const taskItem = e.target.closest('.task-item');
-        if (!taskItem) return;
-        
+        const groupHeader = e.target.closest('.group-header');
         const draggingItem = this.taskList.querySelector('.dragging');
-        if (draggingItem === taskItem) return;
+        
+        if (!draggingItem) return;
         
         if (this.lastAnimationFrame) {
             cancelAnimationFrame(this.lastAnimationFrame);
         }
         
         this.lastAnimationFrame = requestAnimationFrame(() => {
-            const rect = taskItem.getBoundingClientRect();
-            const threshold = rect.top + rect.height / 2;
-            
-            const items = this.taskList.querySelectorAll('.task-item');
-            items.forEach(item => item.classList.remove('drop-before', 'drop-after'));
-            
-            if (e.clientY < threshold) {
-                taskItem.classList.add('drop-before');
-                taskItem.parentNode.insertBefore(draggingItem, taskItem);
-            } else {
-                taskItem.classList.add('drop-after');
-                taskItem.parentNode.insertBefore(draggingItem, taskItem.nextSibling);
+            // If hovering over a task
+            if (taskItem && taskItem !== draggingItem) {
+                const rect = taskItem.getBoundingClientRect();
+                const threshold = rect.top + rect.height / 2;
+                
+                if (e.clientY < threshold) {
+                    taskItem.parentNode.insertBefore(draggingItem, taskItem);
+                } else {
+                    taskItem.parentNode.insertBefore(draggingItem, taskItem.nextSibling);
+                }
             }
-            
-            const containerRect = this.taskList.getBoundingClientRect();
-            const scrollThreshold = 50;
-            
-            if (e.clientY - containerRect.top < scrollThreshold) {
-                this.taskList.scrollBy({ top: -10, behavior: 'smooth' });
-            } else if (containerRect.bottom - e.clientY < scrollThreshold) {
-                this.taskList.scrollBy({ top: 10, behavior: 'smooth' });
+            // If hovering over a group header
+            else if (groupHeader) {
+                const nextElement = groupHeader.nextElementSibling;
+                if (nextElement) {
+                    groupHeader.parentNode.insertBefore(draggingItem, nextElement);
+                }
             }
         });
     }
@@ -369,21 +406,72 @@ class MatrixTodo {
     handleDrop(e) {
         e.preventDefault();
         
-        const items = this.taskList.querySelectorAll('.task-item');
-        items.forEach(item => {
-            item.classList.remove('drop-before', 'drop-after');
-        });
+        const droppedTask = this.taskList.querySelector('.dragging');
+        if (!droppedTask) {
+            console.log('No dragging task found');
+            return;
+        }
         
-        const newTasks = Array.from(items)
-            .map(item => this.tasks.find(task => task.id === item.dataset.id));
+        // Find the new group by looking upward through previous siblings
+        const findGroup = (element) => {
+            let current = element;
+            console.log('Starting group search from:', current);
+            while (current) {
+                // If we find a task that's not grouped, stop searching
+                if (current.classList.contains('task-item') && 
+                    !current.classList.contains('grouped-task') && 
+                    current !== element) {
+                    console.log('Found ungrouped task, stopping search');
+                    return null;
+                }
+                
+                if (current.classList.contains('group-header')) {
+                    console.log('Found group header:', current.textContent);
+                    return current.textContent.toLowerCase();
+                }
+                current = current.previousElementSibling;
+                console.log('Moving to previous sibling:', current);
+            }
+            console.log('No group found, task will be ungrouped');
+            return null;
+        };
         
-        this.tasks = newTasks;
+        const newGroup = findGroup(droppedTask);
+        const taskId = droppedTask.dataset.id;
+        
+        console.log('Task ID:', taskId);
+        console.log('New group:', newGroup);
+        console.log('Current classes:', droppedTask.classList.toString());
+        
+        // Get the new order of all tasks from the DOM
+        const newTaskOrder = Array.from(this.taskList.querySelectorAll('.task-item'))
+            .map(item => {
+                const id = item.dataset.id;
+                const task = this.tasks.find(t => t.id === id);
+                const isDroppedTask = id === taskId;
+                console.log(`Task ${id}:`, isDroppedTask ? '(dropped task)' : '', 
+                           'Old group:', task.group, 
+                           'New group:', isDroppedTask ? newGroup : task.group);
+                return {
+                    ...task,
+                    group: isDroppedTask ? newGroup : task.group
+                };
+            });
+        
+        // Update tasks array with new order and group
+        this.tasks = newTaskOrder;
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         
-        this.render();
-        
-        const dropSound = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
-        dropSound.play().catch(() => {});
+        // Update classes based on new group status
+        console.log('Updating classes. New group:', newGroup);
+        if (newGroup) {
+            console.log('Adding grouped-task class');
+            droppedTask.classList.add('grouped-task');
+        } else {
+            console.log('Removing grouped-task class');
+            droppedTask.classList.remove('grouped-task');
+        }
+        console.log('Final classes:', droppedTask.classList.toString());
     }
 
     loadTasksFromFirebase() {
@@ -721,154 +809,176 @@ class MatrixTodo {
         localStorage.setItem('matrix-notes', JSON.stringify(this.notes));
     }
 
-    checkForUpdates() {
-        const updates = {
-            '1.1.1': {
-                id: 'notes-update',
-                title: 'NEW FEATURES AVAILABLE (v1.1.1)',
-                features: [
-                    'Introducing Notes:',
-                    '• Right-click anywhere to create floating notes',
-                    '• Drag notes to reposition them'
-                ],
-                preview: `
-                    <style>
-                        .feature-preview {
-                            margin: 24px 0;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                        }
-
-                        .context-menu-preview {
-                            background: rgb(255, 255, 255);
-                            border: 1px solid rgb(185, 185, 185);
-                            padding: 4px 0;
-                            width: 200px;
-                            position: relative;
-                            animation: fadeIn 0.3s ease;
-                            border-radius: 4px;
-                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                        }
-
-                        .menu-item {
-                            padding: 6px 24px;
-                            position: relative;
-                            color: rgb(33, 33, 33);
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-                            font-size: 13px;
-                            cursor: default;
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                                                        text-shadow: none;
-
-                        }
-
-                        .menu-item img {
-                            width: 16px;
-                            height: 16px;
-                        }
-
-                        .menu-item.separator {
-                            height: 1px;
-                            background: rgb(225, 225, 225);
-                            margin: 4px 0;
-                            padding: 0;
-                        }
-
-                        .menu-item.highlight {
-                            background: rgb(47, 129, 247);
-                            color: white;
-                        }
-
-                        .cursor {
-                            width: 12px;
-                            height: 12px;
-                            border: 2px solid rgba(0, 0, 0, 0.5);
-                            border-radius: 50%;
-                            position: absolute;
-                            right: 8px;
-                            top: 50%;
-                            transform: translateY(-50%);
-                            opacity: 0;
-                            animation: cursorMove 2s infinite;
-                        }
-
-                        @keyframes cursorMove {
-                            0% { opacity: 0; transform: translate(-20px, -50%); }
-                            20% { opacity: 1; transform: translate(-20px, -50%); }
-                            40% { opacity: 1; transform: translateY(-50%); }
-                            60% { opacity: 1; transform: translateY(-50%); }
-                            80% { opacity: 0; transform: translateY(-50%); }
-                            100% { opacity: 0; transform: translateY(-50%); }
-                        }
-
-                        @keyframes fadeIn {
-                            from { opacity: 0; transform: translateY(10px); }
-                            to { opacity: 1; transform: translateY(0); }
-                        }
-                    </style>
-                    <div class="feature-preview">
-                        <div class="context-menu-preview">
-                            <div class="menu-item">Back</div>
-                            <div class="menu-item">Forward</div>
-                            <div class="menu-item">Reload</div>
-                            <div class="menu-item">Save page as...</div>
-                            <div class="menu-item">Print...</div>
-                            <div class="menu-item separator"></div>
-                            <div class="menu-item">View page source</div>
-                            <div class="menu-item">Inspect</div>
-                            <div class="menu-item separator"></div>
-                            <div class="menu-item highlight">
-                                <img src="icons/icon16.png" alt="Matrix Todo">
-                                <span>Add Matrix Note</span>
-                                <div class="cursor"></div>
-                            </div>
-                        </div>
-                    </div>
-                `
-            }
-        };
-
-        // Get seen updates from localStorage
-        const seenUpdates = JSON.parse(localStorage.getItem('matrix-todo-seen-updates') || '{}');
-        
-        // Find the first unseen update
-        const currentVersion = '1.1.1'; // Match with manifest.json
-        const unseenUpdate = Object.entries(updates).find(([version, update]) => {
-            return version <= currentVersion && !seenUpdates[update.id];
+    clearCompleted() {
+        this.tasks = this.tasks.filter(task => !task.completed);
+        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        this.tasks.forEach(task => {
+            this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: task.id }, "*");
         });
-
-        if (unseenUpdate) {
-            const [version, update] = unseenUpdate;
-            this.showUpdatePopup(update, () => {
-                // Mark this update as seen
-                seenUpdates[update.id] = true;
-                localStorage.setItem('matrix-todo-seen-updates', JSON.stringify(seenUpdates));
-            });
-        }
+        this.render();
     }
 
-    showUpdatePopup(update, onClose) {
-        const popup = document.querySelector('.updates-popup');
-        if (!popup) return;
+    initializeSettings() {
+        this.settingsWheel = document.querySelector('.settings-wheel');
+        this.settingsModal = document.querySelector('.settings-modal');
+        this.closeSettings = document.querySelector('.close-settings');
+        this.historyContainer = document.querySelector('.history-container');
 
-        // Update popup content
-        popup.innerHTML = `
-            <h2>${update.title}</h2>
-            ${update.features.map(feature => `<p>${feature}</p>`).join('')}
-            ${update.preview}
-            <button id="closeUpdates">GOT IT</button>
-        `;
-
-        popup.style.display = 'block';
-
-        const closeButton = document.getElementById('closeUpdates');
-        closeButton.addEventListener('click', () => {
-            popup.style.display = 'none';
-            onClose();
+        this.settingsWheel.addEventListener('click', () => {
+            this.settingsModal.classList.add('active');
+            this.renderHistory();
         });
+
+        this.closeSettings.addEventListener('click', () => {
+            this.settingsModal.classList.remove('active');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === this.settingsModal) {
+                this.settingsModal.classList.remove('active');
+            }
+        });
+    }
+
+    addToHistory(task) {
+        const date = new Date(task.timestamp).toLocaleDateString();
+        if (!this.taskHistory[date]) {
+            this.taskHistory[date] = [];
+        }
+        this.taskHistory[date].push(task);
+        localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
+    }
+
+    renderHistory() {
+        if (!this.historyContainer) return;
+        
+        const dates = Object.keys(this.taskHistory).sort((a, b) => 
+            new Date(b) - new Date(a)
+        );
+
+        const html = dates.map(date => {
+            const tasks = this.taskHistory[date];
+            return `
+                <div class="history-day">
+                    <div class="history-date">${date}</div>
+                    <div class="history-tasks">
+                        ${tasks.map(task => `
+                            <div class="history-task ${task.completed ? 'completed' : ''} ${task.category}">
+                                <span class="history-time">
+                                    ${new Date(task.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                                <span class="history-text">${task.text}</span>
+                                ${task.group ? `<span class="history-group">#${task.group}</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.historyContainer.innerHTML = html;
+    }
+
+    showGroupSuggestions() {
+        const inputText = this.taskInput.value;
+        const hashIndex = inputText.lastIndexOf('#');
+        
+        if (hashIndex === -1) {
+            this.suggestionsDropdown.style.display = 'none';
+            return;
+        }
+
+        const groupPrefix = inputText.slice(hashIndex + 1).toLowerCase();
+        
+        // Get existing groups from tasks
+        const existingGroups = [...new Set(this.tasks
+            .map(task => task.group)
+            .filter(group => group) // Remove null/undefined
+        )];
+        
+        // Filter groups that match the current input
+        const matchingGroups = existingGroups
+            .filter(group => group.toLowerCase().startsWith(groupPrefix))
+            .slice(0, 5); // Limit to 5 suggestions
+        
+        if (matchingGroups.length === 0) {
+            this.suggestionsDropdown.style.display = 'none';
+            return;
+        }
+
+        // Show matching groups
+        this.suggestionsDropdown.innerHTML = matchingGroups
+            .map((group, index) => `
+                <div class="group-suggestion" data-index="${index}">${group}</div>
+            `).join('');
+        
+        this.suggestionsDropdown.style.display = 'block';
+        
+        // Add click handlers for suggestions
+        this.suggestionsDropdown.querySelectorAll('.group-suggestion').forEach(el => {
+            el.addEventListener('click', () => {
+                this.selectGroupSuggestion(el.textContent);
+            });
+        });
+    }
+
+    selectGroupSuggestion(groupName) {
+        const inputText = this.taskInput.value;
+        const hashIndex = inputText.lastIndexOf('#');
+        
+        // Replace the partial group name with the selected one and add a space
+        this.taskInput.value = inputText.slice(0, hashIndex + 1) + groupName + ' ';
+        
+        // Hide dropdown
+        this.suggestionsDropdown.style.display = 'none';
+        
+        // Focus back on input
+        this.taskInput.focus();
+        
+        // Trigger ghost text update
+        this.updateGhostText();
+    }
+
+    handleSuggestionNavigation(e) {
+        if (this.suggestionsDropdown.style.display === 'none') return;
+        
+        const suggestions = this.suggestionsDropdown.querySelectorAll('.group-suggestion');
+        const currentIndex = Array.from(suggestions).findIndex(el => el.classList.contains('selected'));
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (currentIndex === -1) {
+                    // If nothing is selected, select the first item
+                    suggestions[0]?.classList.add('selected');
+                } else if (currentIndex < suggestions.length - 1) {
+                    suggestions[currentIndex].classList.remove('selected');
+                    suggestions[currentIndex + 1].classList.add('selected');
+                }
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                if (currentIndex > 0) {
+                    suggestions[currentIndex].classList.remove('selected');
+                    suggestions[currentIndex - 1].classList.add('selected');
+                }
+                break;
+                
+            case 'Enter':
+                if (suggestions.length > 0) {
+                    e.preventDefault();
+                    // If nothing is selected, select first suggestion
+                    const selectedSuggestion = this.suggestionsDropdown.querySelector('.group-suggestion.selected') 
+                        || suggestions[0];
+                    this.selectGroupSuggestion(selectedSuggestion.textContent);
+                }
+                break;
+                
+            case 'Escape':
+                this.suggestionsDropdown.style.display = 'none';
+                break;
+        }
     }
 }
 

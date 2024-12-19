@@ -16,16 +16,6 @@ console.log("Firebase initialized:", app);
 // Add this at the top to verify the script is loaded
 console.log("Sandbox script starting...");
 
-// Add this right after Firebase initialization to test the connection
-db.collection("tasks").get().then(snapshot => {
-    console.log("TEST QUERY - Number of documents:", snapshot.size);
-    snapshot.forEach(doc => {
-        console.log("TEST QUERY - Document:", doc.id, doc.data());
-    });
-}).catch(error => {
-    console.error("TEST QUERY - Error:", error);
-});
-
 window.addEventListener("message", async (event) => {
     console.log("👉 Message received in sandbox:", event.data);
     console.log("👉 Message origin:", event.origin);
@@ -141,3 +131,13 @@ setTimeout(() => {
         data: { type: "getGlobalTodos" }
     }));
 }, 3000);
+
+// Add this right after Firebase initialization to test the connection
+db.collection("tasks").limit(3).get().then(snapshot => {
+    console.log("TEST QUERY - Number of documents:", snapshot.size);
+    snapshot.forEach(doc => {
+        console.log("TEST QUERY - Document:", doc.id, doc.data());
+    });
+}).catch(error => {
+    console.error("TEST QUERY - Error:", error);
+});

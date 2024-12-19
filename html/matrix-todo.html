@@ -27,6 +27,25 @@
                 0 0 4px rgba(var(--matrix-green-rgb), 0.4),
                 0 0 6px rgba(var(--matrix-green-rgb), 0.2);
             animation: flicker 5s infinite;
+            /* Custom scrollbar for the entire page */
+            overflow-y: overlay;  /* Makes scrollbar overlay content */
+        }
+
+        /* Custom scrollbar for the entire page */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(var(--matrix-green-rgb), 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(var(--matrix-green-rgb), 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(var(--matrix-green-rgb), 0.5);
         }
 
         .container {
@@ -80,7 +99,7 @@
             outline: none;
             font-size: 24px;
             padding: 0;
-            margin-bottom: 32px;
+            margin-bottom: 0;
             position: relative;
             z-index: 1;
             background: transparent;
@@ -178,11 +197,13 @@
             right: 20px;
             font-size: 10px;
             opacity: 0.5;
+            display: flex;
+            align-items: center;
         }
 
         .attribution {
             display: inline-block;
-            margin-left: 8px;
+            margin-left: 0;
         }
 
         .attribution a {
@@ -593,6 +614,261 @@
             border-color: rgba(var(--matrix-green-rgb), 0.3);
             opacity: 1;
         }
+
+        .group-header {
+            color: var(--matrix-green);
+            font-size: 13px;
+            margin: 20px 0 8px 0;
+            opacity: 0.4;
+            letter-spacing: 2px;
+            text-shadow: 
+                0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+        }
+
+        .task-item {
+            margin-left: 0;
+            transition: all 0.3s ease;
+        }
+
+        .grouped-task {
+            margin-left: 12px;
+            border-left: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+            padding-left: 12px;
+        }
+
+        /* First group doesn't need top margin */
+        .group-header:first-of-type {
+            margin-top: 0;
+        }
+
+        /* Add subtle hover effect for grouped items */
+        .group-header:hover {
+            opacity: 0.6;
+        }
+
+        .settings-wheel {
+            position: static;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+            font-size: 10px;
+            order: -1;
+        }
+
+        .settings-wheel:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+            padding: 24px;
+            z-index: 1000;
+            width: 300px;
+            box-shadow: 
+                0 0 40px rgba(0, 0, 0, 0.6),
+                inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05);
+            max-height: 80vh;
+            overflow-y: hidden;
+        }
+
+        .settings-modal.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-modal h2 {
+            color: var(--matrix-green);
+            margin-bottom: 20px;
+            font-size: 16px;
+            letter-spacing: 2px;
+            opacity: 0.9;
+            text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.4);
+        }
+
+        .settings-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            opacity: 0.8;
+        }
+
+        .settings-option:hover {
+            opacity: 1;
+        }
+
+        .close-settings {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--matrix-green);
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 18px;
+        }
+
+        .close-settings:hover {
+            opacity: 1;
+        }
+
+        /* Add separator style */
+        .shortcut-hint > *:not(:last-child)::after {
+            content: "•";
+            margin: 0 12px;
+            opacity: 0.6;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section:last-child {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .settings-section h3 {
+            color: var(--matrix-green);
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            opacity: 0.8;
+        }
+
+        .history-container {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            max-height: 400px;
+        }
+
+        .history-day {
+            margin-bottom: 20px;
+        }
+
+        .history-date {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .history-task {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .history-task.completed {
+            text-decoration: line-through;
+            opacity: 0.4;
+        }
+
+        .history-task.urgent {
+            color: #FFD700;
+        }
+
+        .history-time {
+            opacity: 0.5;
+            min-width: 60px;
+        }
+
+        .history-group {
+            opacity: 0.5;
+            font-size: 10px;
+        }
+
+        /* Add custom scrollbar for history */
+        .history-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .history-container::-webkit-scrollbar-track {
+            background: rgba(var(--matrix-green-rgb), 0.1);
+        }
+
+        .history-container::-webkit-scrollbar-thumb {
+            background: rgba(var(--matrix-green-rgb), 0.3);
+        }
+
+        .history-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(var(--matrix-green-rgb), 0.5);
+        }
+
+        .group-suggestions {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .group-suggestion {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            color: var(--matrix-green);
+            opacity: 0.7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-suggestion:first-child {
+            background: rgba(var(--matrix-green-rgb), 0.05);
+            border-left: 2px solid var(--matrix-green);
+        }
+
+        .group-suggestion:first-child::after {
+            content: '[ENTER]';
+            font-size: 10px;
+            opacity: 0.5;
+            margin-left: 8px;
+            letter-spacing: 1px;
+        }
+
+        .group-suggestion.selected {
+            background: rgba(var(--matrix-green-rgb), 0.1);
+            border-left: 2px solid var(--matrix-green);
+        }
+
+        .group-suggestion.selected::after {
+            content: '[ENTER]';
+            font-size: 10px;
+            opacity: 0.5;
+            margin-left: 8px;
+            letter-spacing: 1px;
+        }
+
+        .group-suggestion:hover {
+            background: rgba(var(--matrix-green-rgb), 0.1);
+            border-left: 2px solid var(--matrix-green);
+        }
     </style>
 </head>
 <body>
@@ -619,18 +895,31 @@
             <button id="closeUpdates">INITIALIZE</button>
         </div>
     </div>
-    <div class="global-toggle">
-        <label class="switch">
-            <input type="checkbox" id="globalTodosToggle">
-            <span class="slider"></span>
-        </label>
-        <span class="toggle-label">SHOW ANONYMOUS TODOS</span>
+    <div class="settings-modal">
+        <h2>SETTINGS</h2>
+        <button class="close-settings">×</button>
+        
+        <div class="settings-section">
+            <div class="settings-option">
+                <span>SHOW ANONYMOUS TODOS</span>
+                <label class="switch">
+                    <input type="checkbox" id="globalTodosToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>TASK HISTORY</h3>
+            <div class="history-container"></div>
+        </div>
     </div>
     <div class="shortcut-hint">
-        CTRL + SHIFT + C TO CLEAR COMPLETED
-        <span class="attribution">• made by <a href="https://x.com/aladdinnjr" target="_blank">@aladdinnjr</a></span>
+        <div class="settings-wheel">[SETTINGS]</div>
+        <span>CTRL + SHIFT + C TO CLEAR COMPLETED</span>
+        <span class="attribution">MADE BY <a href="https://x.com/aladdinnjr" target="_blank">@ALADDINNJR</a></span>
     </div>
     <script src="matrix-bg.js"></script>
-    <script src="newtab.js"></script>
+    <script type="module" src="../js/matrix-todo.js"></script>
 </body>
 </html>
