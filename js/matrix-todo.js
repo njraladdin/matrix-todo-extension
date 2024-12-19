@@ -144,7 +144,16 @@ class MatrixTodo {
             }
         });
 
-        this.taskHistory = JSON.parse(localStorage.getItem('matrix-tasks-history')) || {};
+        this.taskHistory = {};
+        const savedHistory = localStorage.getItem('matrix-tasks-history');
+        if (savedHistory) {
+            try {
+                this.taskHistory = JSON.parse(savedHistory);
+            } catch (e) {
+                console.error('Error parsing task history:', e);
+                this.taskHistory = {};
+            }
+        }
         
         this.initializeSettings();
 
@@ -201,10 +210,10 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
-        // Extract group and clean text
-        const groupMatch = text.match(/#(\w+)/);
+        // Update regex to include hyphens in group names
+        const groupMatch = text.match(/#([\w-]+)/);
         const group = groupMatch ? groupMatch[1].toLowerCase() : null;
-        text = text.replace(/#\w+/, '').trim();
+        text = text.replace(/#[\w-]+/, '').trim();
 
         const task = {
             id: Date.now().toString(),
@@ -280,17 +289,26 @@ class MatrixTodo {
 
         // Generate HTML for each group
         const html = Object.entries(groupedTasks)
-            .map(([group, tasks]) => `
-                ${group !== 'UNGROUPED' ? `<div class="group-header">${group}</div>` : ''}
-                ${tasks.map(task => `
-                    <div class="task-item ${task.completed ? 'completed' : ''} ${task.category} ${task.group ? 'grouped-task' : ''}" 
-                        data-id="${task.id}"
-                        draggable="true">
-                        <button class="delete-btn">×</button>
-                        <span>${task.text}</span>
-                    </div>
-                `).join('')}
-            `).join('');
+            .map(([group, tasks]) => {
+                // Check if all tasks in the group are completed
+                const isGroupCompleted = tasks.length > 0 && tasks.every(task => task.completed);
+                
+                return `
+                    ${group !== 'UNGROUPED' ? `
+                        <div class="group-header ${isGroupCompleted ? 'completed' : ''}">
+                            ${group}
+                        </div>
+                    ` : ''}
+                    ${tasks.map(task => `
+                        <div class="task-item ${task.completed ? 'completed' : ''} ${task.category} ${task.group ? 'grouped-task' : ''}" 
+                            data-id="${task.id}"
+                            draggable="true">
+                            <button class="delete-btn">×</button>
+                            <span>${task.text}</span>
+                        </div>
+                    `).join('')}
+                `;
+            }).join('');
 
         this.taskList.innerHTML = html;
         this.updateProgress();
@@ -841,23 +859,37 @@ class MatrixTodo {
     }
 
     addToHistory(task) {
-        const date = new Date(task.timestamp).toLocaleDateString();
-        if (!this.taskHistory[date]) {
-            this.taskHistory[date] = [];
+        if (!task || !task.timestamp) {
+            console.warn('Invalid task or missing timestamp:', task);
+            return;
         }
-        this.taskHistory[date].push(task);
-        localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
+
+        try {
+            const date = new Date(task.timestamp).toLocaleDateString();
+            if (!this.taskHistory[date]) {
+                this.taskHistory[date] = [];
+            }
+            this.taskHistory[date].push(task);
+            localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
+        } catch (e) {
+            console.error('Error adding task to history:', e);
+        }
     }
 
     renderHistory() {
         if (!this.historyContainer) return;
         
+        // Sort dates in descending order (most recent first)
         const dates = Object.keys(this.taskHistory).sort((a, b) => 
             new Date(b) - new Date(a)
         );
 
         const html = dates.map(date => {
-            const tasks = this.taskHistory[date];
+            // Sort tasks within each day by timestamp in descending order
+            const tasks = this.taskHistory[date].sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
             return `
                 <div class="history-day">
                     <div class="history-date">${date}</div>
