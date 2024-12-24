@@ -3,6 +3,10 @@ import UpdateManager from './update-manager.js';
 class MatrixTodo {
     constructor() {
         this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
+        
+        // Clean up any existing empty tasks
+        this.cleanupEmptyTasks();
+        
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
         this.progressBar = document.querySelector('.progress-bar');
@@ -213,7 +217,14 @@ class MatrixTodo {
         // Update regex to include hyphens in group names and normalize to uppercase
         const groupMatch = text.match(/#([\w-]+)/);
         const group = groupMatch ? groupMatch[1].toUpperCase() : null;
+        
+        // Remove the group tag from the text and trim
         text = text.replace(/#[\w-]+/, '').trim();
+
+        // If text is empty after removing tags, use [BLANK]
+        if (!text) {
+            text = '[BLANK]';
+        }
 
         const task = {
             id: Date.now().toString(),
@@ -260,6 +271,21 @@ class MatrixTodo {
     }
 
     updateProgress() {
+        console.log('All tasks:', this.tasks.map(t => ({
+            text: t.text,
+            completed: t.completed,
+            group: t.group
+        })));
+        
+        const totalTasks = this.tasks.length;
+        const completedTasks = this.tasks.filter(t => t.completed).length;
+        
+        console.log('Progress calculation:', {
+            totalTasks,
+            completedTasks,
+            percentage: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0
+        });
+
         const percentage = this.tasks.length 
             ? Math.round((this.tasks.filter(t => t.completed).length / this.tasks.length) * 100)
             : 0;
@@ -396,97 +422,74 @@ class MatrixTodo {
     handleDragOver(e) {
         e.preventDefault();
         const taskItem = e.target.closest('.task-item');
-        const groupHeader = e.target.closest('.group-header');
         const draggingItem = this.taskList.querySelector('.dragging');
         
         if (!draggingItem) return;
         
-        if (this.lastAnimationFrame) {
-            cancelAnimationFrame(this.lastAnimationFrame);
-        }
-        
-        this.lastAnimationFrame = requestAnimationFrame(() => {
-            // If hovering over a task
-            if (taskItem && taskItem !== draggingItem) {
-                const rect = taskItem.getBoundingClientRect();
-                const threshold = rect.top + rect.height / 2;
-                
-                if (e.clientY < threshold) {
-                    taskItem.parentNode.insertBefore(draggingItem, taskItem);
-                } else {
-                    taskItem.parentNode.insertBefore(draggingItem, taskItem.nextSibling);
-                }
-            }
-            // If hovering over a group header
-            else if (groupHeader) {
-                const nextElement = groupHeader.nextElementSibling;
-                if (nextElement) {
-                    groupHeader.parentNode.insertBefore(draggingItem, nextElement);
-                }
-            }
-        });
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        
-        const droppedTask = this.taskList.querySelector('.dragging');
-        if (!droppedTask) {
-            console.log('No dragging task found');
-            return;
-        }
-        
-        // Find the new group by looking upward through previous siblings
-        const findGroup = (element) => {
+        // Get groups of both items
+        const getDraggingGroup = (element) => {
             let current = element;
             while (current) {
-                // If we find a task that's not grouped, stop searching
-                if (current.classList.contains('task-item') && 
-                    !current.classList.contains('grouped-task') && 
-                    current !== element) {
-                    return null;
-                }
-                
                 if (current.classList.contains('group-header')) {
-                    // Normalize group name to uppercase to maintain consistency
                     return current.textContent.trim().toUpperCase();
                 }
                 current = current.previousElementSibling;
             }
             return null;
         };
+
+        const draggingGroup = getDraggingGroup(draggingItem);
+        const targetGroup = taskItem ? getDraggingGroup(taskItem) : null;
+
+        console.log('Drag groups:', {
+            draggingGroup,
+            targetGroup,
+            draggingText: draggingItem.textContent,
+            targetText: taskItem?.textContent
+        });
+
+        // Only allow drag if:
+        // 1. Both items are ungrouped (both groups null)
+        // 2. Both items are in the same group
+        if (taskItem && taskItem !== draggingItem) {
+            const canDrop = (draggingGroup === null && targetGroup === null) || 
+                           (draggingGroup === targetGroup);
+
+            if (!canDrop) {
+                console.log('Drag prevented - items in different groups');
+                return;
+            }
+
+            const rect = taskItem.getBoundingClientRect();
+            const threshold = rect.top + rect.height / 2;
+            
+            if (e.clientY < threshold) {
+                taskItem.parentNode.insertBefore(draggingItem, taskItem);
+            } else {
+                taskItem.parentNode.insertBefore(draggingItem, taskItem.nextSibling);
+            }
+        }
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
         
-        const newGroup = findGroup(droppedTask);
+        const droppedTask = this.taskList.querySelector('.dragging');
+        if (!droppedTask) return;
+        
         const taskId = droppedTask.dataset.id;
         
         // Get the new order of all tasks from the DOM
         const newTaskOrder = Array.from(this.taskList.querySelectorAll('.task-item'))
             .map(item => {
                 const id = item.dataset.id;
-                const task = this.tasks.find(t => t.id === id);
-                const isDroppedTask = id === taskId;
-                
-                // For the dropped task, normalize the group name
-                if (isDroppedTask && newGroup) {
-                    return {
-                        ...task,
-                        group: newGroup
-                    };
-                }
-                return task;
+                return this.tasks.find(t => t.id === id);
             });
         
-        // Update tasks array with new order and group
+        // Update tasks array with new order
         this.tasks = newTaskOrder;
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         
-        // Update classes based on new group status
-        if (newGroup) {
-            droppedTask.classList.add('grouped-task');
-        } else {
-            droppedTask.classList.remove('grouped-task');
-        }
-
         // Force a re-render to ensure consistent grouping
         this.render();
     }
@@ -1010,6 +1013,16 @@ class MatrixTodo {
             case 'Escape':
                 this.suggestionsDropdown.style.display = 'none';
                 break;
+        }
+    }
+
+    cleanupEmptyTasks() {
+        const originalLength = this.tasks.length;
+        this.tasks = this.tasks.filter(task => task.text.trim());
+        
+        if (this.tasks.length !== originalLength) {
+            console.log(`Cleaned up ${originalLength - this.tasks.length} empty tasks`);
+            localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         }
     }
 }
