@@ -203,6 +203,9 @@ class MatrixTodo {
             const taskItem = e.target.closest('.task-item');
             if (!taskItem) return;
 
+            // Stop event propagation to prevent document.body click handler
+            e.stopPropagation();
+
             if (e.target.classList.contains('delete-btn')) {
                 this.deleteTask(taskItem.dataset.id);
             } else {
@@ -327,6 +330,13 @@ class MatrixTodo {
                     type: "updateTask", 
                     task: updatedTask 
                 }, "*");
+
+                // If this task is being marked as completed and it's the current task,
+                // automatically unset it as current
+                if (updatedTask.completed && id === this.currentTaskId) {
+                    this.setCurrentTask(null);
+                }
+
                 return updatedTask;
             }
             return task;
