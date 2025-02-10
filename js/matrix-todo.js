@@ -32,6 +32,7 @@ class MatrixTodo {
         });
 
         this.bindEvents();
+        this.bindContextMenu();
         this.render();
 
         this.currentCategory = 'normal';
@@ -174,6 +175,9 @@ class MatrixTodo {
 
         // Add keyboard navigation for suggestions
         this.taskInput.addEventListener('keydown', this.handleSuggestionNavigation.bind(this));
+
+        // Add to constructor after this.tasks initialization
+        this.currentTaskId = localStorage.getItem('matrix-current-task') || null;
     }
 
     initializeProgressBar() {
@@ -205,6 +209,57 @@ class MatrixTodo {
                 this.toggleTask(taskItem.dataset.id);
             }
         });
+
+        this.bindContextMenu();
+    }
+
+    bindContextMenu() {
+        this.taskList.addEventListener('contextmenu', (e) => {
+            const taskItem = e.target.closest('.task-item');
+            if (!taskItem) return;
+            
+            e.preventDefault();
+            
+            // Remove any existing context menus first
+            const existingMenus = document.querySelectorAll('.matrix-context-menu');
+            existingMenus.forEach(menu => menu.remove());
+            
+            const taskId = taskItem.dataset.id;
+            const isCurrentTask = taskId === this.currentTaskId;
+            
+            const menu = document.createElement('div');
+            menu.className = 'matrix-context-menu';
+            menu.innerHTML = `
+                <div class="menu-item ${isCurrentTask ? 'active' : ''}">
+                    ${isCurrentTask ? 'UNSET CURRENT TASK' : 'SET AS CURRENT TASK'}
+                </div>
+            `;
+            
+            menu.style.left = `${e.pageX}px`;
+            menu.style.top = `${e.pageY}px`;
+            document.body.appendChild(menu);
+            
+            const menuItem = menu.querySelector('.menu-item');
+            menuItem.addEventListener('click', () => {
+                this.setCurrentTask(isCurrentTask ? null : taskId);
+                document.body.removeChild(menu);
+            });
+            
+            // Close menu when clicking outside
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    document.body.removeChild(menu);
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            document.addEventListener('click', closeMenu);
+        });
+    }
+
+    setCurrentTask(taskId) {
+        this.currentTaskId = taskId;
+        localStorage.setItem('matrix-current-task', taskId);
+        this.render();
     }
 
     addTask(text) {
@@ -332,7 +387,9 @@ class MatrixTodo {
                         </div>
                     ` : ''}
                     ${tasks.map(task => `
-                        <div class="task-item ${task.completed ? 'completed' : ''} ${task.category} ${task.group ? 'grouped-task' : ''}" 
+                        <div class="task-item ${task.completed ? 'completed' : ''} 
+                            ${task.category} ${task.group ? 'grouped-task' : ''}
+                            ${task.id === this.currentTaskId ? 'current-task' : ''}" 
                             data-id="${task.id}"
                             draggable="true">
                             <button class="delete-btn">×</button>

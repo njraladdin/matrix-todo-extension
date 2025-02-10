@@ -278,6 +278,136 @@ class UpdateManager {
                         </div>
                     </div>
                 `
+            },
+            'current-task-update': {
+                id: 'current-task-update',
+                title: 'NEW FEATURES AVAILABLE',
+                features: [
+                    'NEW: WHICH TASK ARE YOU WORKING ON?',
+                    '• RIGHT-CLICK TASK TO SET/UNSET CURRENT'
+                ],
+                preview: `
+                    <style>
+                        .current-task-preview {
+                            margin: 32px 0 24px;
+                            font-family: monospace;
+                            color: var(--matrix-green);
+                            position: relative;
+                        }
+
+                        .demo-label {
+                            position: absolute;
+                            top: -20px;
+                            left: 0;
+                            font-size: 11px;
+                            opacity: 0.4;
+                            letter-spacing: 1px;
+                        }
+
+                        .demo-task-item {
+                            background: rgba(var(--matrix-green-rgb), 0.04);
+                            padding: 12px 12px 12px 28px;
+                            position: relative;
+                            margin: 8px 0;
+                            transition: all 0.3s ease;
+                            font-size: 18px;
+                        }
+
+                        .demo-task-item.current {
+                            border-left: 2px solid var(--matrix-green);
+                            overflow: hidden;
+                        }
+
+                        .demo-task-item.current::before {
+                            content: "";
+                            position: absolute;
+                            left: 8px;
+                            top: 50%;
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 50%;
+                            background-color: var(--matrix-green);
+                            transform: translateY(-50%);
+                            animation: dotPulse 2s infinite;
+                            box-shadow: 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
+                        }
+
+                        .demo-task-item.current::after {
+                            content: "";
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: repeating-linear-gradient(
+                                90deg,
+                                transparent,
+                                transparent 15px,
+                                rgba(var(--matrix-green-rgb), 0.02) 15px,
+                                rgba(var(--matrix-green-rgb), 0.02) 30px
+                            );
+                            animation: matrixRain 8s linear infinite;
+                            pointer-events: none;
+                            opacity: 0.4;
+                        }
+
+                        .demo-menu {
+                            position: absolute;
+                            right: 20px;
+                            top: 0;
+                            background: rgba(0, 0, 0, 0.85);
+                            border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+                            padding: 2px;
+                            opacity: 0;
+                            transition: opacity 0.3s;
+                        }
+
+                        .demo-menu.visible {
+                            opacity: 1;
+                        }
+
+                        .demo-menu-item {
+                            padding: 8px 16px;
+                            color: var(--matrix-green);
+                            opacity: 0.7;
+                            white-space: nowrap;
+                            font-size: 14px;
+                            letter-spacing: 1px;
+                        }
+
+                        @keyframes dotPulse {
+                            0% { 
+                                opacity: 0.4; 
+                                transform: translateY(-50%) scale(0.8);
+                                box-shadow: 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+                            }
+                            50% { 
+                                opacity: 1; 
+                                transform: translateY(-50%) scale(1);
+                                box-shadow: 0 0 12px rgba(var(--matrix-green-rgb), 0.6);
+                            }
+                            100% { 
+                                opacity: 0.4; 
+                                transform: translateY(-50%) scale(0.8);
+                                box-shadow: 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+                            }
+                        }
+
+                        @keyframes matrixRain {
+                            0% { background-position: 0 0; }
+                            100% { background-position: 60px 0; }
+                        }
+                    </style>
+                    <div class="current-task-preview">
+                        <div class="demo-label">DEMO</div>
+                        <div class="demo-task-item">
+                            IMPLEMENT NEW FEATURE
+                            <div class="demo-menu">
+                                <div class="demo-menu-item">SET AS CURRENT TASK</div>
+                            </div>
+                        </div>
+                    </div>
+                `
             }
         };
     }
@@ -323,8 +453,12 @@ class UpdateManager {
             <button id="closeUpdates">GOT IT</button>
         `;
 
-        // Initialize animation after popup is shown
-        this.initializeGroupsAnimation();
+        // Initialize appropriate animation
+        if (update.id === 'current-task-update') {
+            this.initializeCurrentTaskAnimation();
+        } else if (update.id === 'groups-update') {
+            this.initializeGroupsAnimation();
+        }
 
         popup.style.display = 'block';
 
@@ -396,6 +530,31 @@ class UpdateManager {
         setTimeout(() => {
             this.initializeGroupsAnimation();
         }, 9000);
+    }
+
+    initializeCurrentTaskAnimation() {
+        const taskItem = document.querySelector('.demo-task-item');
+        const menu = document.querySelector('.demo-menu');
+        
+        // Animation sequence
+        const animate = () => {
+            // Show menu
+            setTimeout(() => menu.classList.add('visible'), 1000);
+            
+            // Add current task styling
+            setTimeout(() => {
+                menu.classList.remove('visible');
+                taskItem.classList.add('current');
+            }, 2000);
+            
+            // Reset after delay
+            setTimeout(() => {
+                taskItem.classList.remove('current');
+                animate(); // Loop animation
+            }, 4000);
+        };
+        
+        animate();
     }
 }
 

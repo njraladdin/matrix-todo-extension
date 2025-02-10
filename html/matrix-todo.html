@@ -568,9 +568,9 @@
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.9);
             border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
-            padding: 24px;
+            padding: 32px;
             z-index: 1000;
-            width: 300px;
+            width: 500px;
             box-shadow: 
                 0 0 40px rgba(0, 0, 0, 0.6),
                 inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05);
@@ -900,6 +900,121 @@
 
 .group-header:hover .delete-group-btn {
     opacity: 1;
+}
+
+/* Context menu styles */
+.matrix-context-menu {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+    padding: 2px;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.menu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    color: var(--matrix-green);
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    opacity: 1;
+    background: rgba(var(--matrix-green-rgb), 0.05);
+    padding-left: 16px;
+}
+
+.menu-item.active {
+    border-left: 2px solid rgba(var(--matrix-green-rgb), 0.4);
+    padding-left: 10px;
+}
+
+/* Current task styles - Matrix-inspired */
+.task-list .current-task {
+    background: rgba(var(--matrix-green-rgb), 0.04);
+    border-left: 2px solid var(--matrix-green);
+    padding: 8px 8px 8px 24px;
+    position: relative;
+    transition: all 0.3s ease;
+    margin: 4px 0;
+    overflow: hidden;
+}
+
+/* Pulsing dot indicator */
+.task-list .current-task::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--matrix-green);
+    transform: translateY(-50%);
+    animation: dotPulse 2s infinite;
+    box-shadow: 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
+}
+
+/* Matrix rain background effect */
+.task-list .current-task::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 15px,
+        rgba(var(--matrix-green-rgb), 0.02) 15px,
+        rgba(var(--matrix-green-rgb), 0.02) 30px
+    );
+    animation: matrixRain 8s linear infinite;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+@keyframes dotPulse {
+    0% { 
+        opacity: 0.4; 
+        transform: translateY(-50%) scale(0.8);
+        box-shadow: 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    }
+    50% { 
+        opacity: 1; 
+        transform: translateY(-50%) scale(1);
+        box-shadow: 0 0 12px rgba(var(--matrix-green-rgb), 0.6);
+    }
+    100% { 
+        opacity: 0.4; 
+        transform: translateY(-50%) scale(0.8);
+        box-shadow: 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    }
+}
+
+@keyframes matrixRain {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 60px 0;
+    }
+}
+
+/* Special handling for completed current tasks */
+.task-list .current-task.completed::before {
+    animation: none;
+    opacity: 0.3;
+}
+
+.task-list .current-task.completed span {
+    background: none;
 }
     </style>
 </head>
