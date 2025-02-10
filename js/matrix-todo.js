@@ -7,6 +7,9 @@ class MatrixTodo {
         // Clean up any existing empty tasks
         this.cleanupEmptyTasks();
         
+        // Load the current task ID from localStorage
+        this.currentTaskId = localStorage.getItem('matrix-current-task') || null;
+        
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
         this.progressBar = document.querySelector('.progress-bar');
@@ -175,9 +178,6 @@ class MatrixTodo {
 
         // Add keyboard navigation for suggestions
         this.taskInput.addEventListener('keydown', this.handleSuggestionNavigation.bind(this));
-
-        // Add to constructor after this.tasks initialization
-        this.currentTaskId = localStorage.getItem('matrix-current-task') || null;
     }
 
     initializeProgressBar() {
@@ -235,12 +235,15 @@ class MatrixTodo {
                 </div>
             `;
             
-            menu.style.left = `${e.pageX}px`;
-            menu.style.top = `${e.pageY}px`;
+            menu.style.left = `${e.clientX}px`;
+            menu.style.top = `${e.clientY}px`;
+            
             document.body.appendChild(menu);
             
             const menuItem = menu.querySelector('.menu-item');
-            menuItem.addEventListener('click', () => {
+            menuItem.addEventListener('click', (e) => {
+                // Stop event propagation to prevent document.body click handler
+                e.stopPropagation();
                 this.setCurrentTask(isCurrentTask ? null : taskId);
                 document.body.removeChild(menu);
             });
@@ -257,9 +260,23 @@ class MatrixTodo {
     }
 
     setCurrentTask(taskId) {
+        if (taskId !== null && !this.tasks.find(task => task.id === taskId)) {
+            taskId = null;
+        }
+        
         this.currentTaskId = taskId;
         localStorage.setItem('matrix-current-task', taskId);
-        this.render();
+        
+        // Just toggle the class on the clicked task
+        const clickedTask = this.taskList.querySelector(`[data-id="${taskId}"]`);
+        const currentTask = this.taskList.querySelector('.current-task');
+        
+        if (currentTask) {
+            currentTask.classList.remove('current-task');
+        }
+        if (clickedTask) {
+            clickedTask.classList.add('current-task');
+        }
     }
 
     addTask(text) {
@@ -315,7 +332,15 @@ class MatrixTodo {
             return task;
         });
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
-        this.render();
+        
+        // Update just the completed state without full re-render
+        const taskElement = this.taskList.querySelector(`[data-id="${id}"]`);
+        if (taskElement) {
+            const task = this.tasks.find(t => t.id === id);
+            taskElement.classList.toggle('completed', task.completed);
+        }
+        
+        this.updateProgress();
     }
 
     deleteTask(id) {
@@ -367,13 +392,6 @@ class MatrixTodo {
             acc[group].push(task);
             return acc;
         }, {});
-
-        // Remove empty groups (except UNGROUPED)
-        Object.keys(groupedTasks).forEach(group => {
-            if (group !== 'UNGROUPED' && groupedTasks[group].length === 0) {
-                delete groupedTasks[group];
-            }
-        });
 
         // Generate HTML for each group
         const html = Object.entries(groupedTasks)
