@@ -2,6 +2,7 @@ import UpdateManager from './update-manager.js';
 
 class MatrixTodo {
     constructor() {
+        this.taskTimes = JSON.parse(localStorage.getItem('matrix-task-times')) || {};
         this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
         
         // Clean up any existing empty tasks
@@ -267,18 +268,61 @@ class MatrixTodo {
             taskId = null;
         }
         
+        // If there's a current task, save its end time
+        if (this.currentTaskId && this.currentTaskId !== taskId) {
+            const currentTime = this.taskTimes[this.currentTaskId] || {};
+            currentTime.lastEndTime = Date.now();
+            this.taskTimes[this.currentTaskId] = currentTime;
+            localStorage.setItem('matrix-task-times', JSON.stringify(this.taskTimes));
+        }
+        
+        // Set up timing for new current task
+        if (taskId && taskId !== this.currentTaskId) {
+            if (!this.taskTimes[taskId]) {
+                this.taskTimes[taskId] = {
+                    totalTime: 0,
+                    lastStartTime: Date.now()
+                };
+            } else {
+                this.taskTimes[taskId].lastStartTime = Date.now();
+            }
+            localStorage.setItem('matrix-task-times', JSON.stringify(this.taskTimes));
+        }
+        
         this.currentTaskId = taskId;
         localStorage.setItem('matrix-current-task', taskId);
         
-        // Just toggle the class on the clicked task
-        const clickedTask = this.taskList.querySelector(`[data-id="${taskId}"]`);
+        // Keep the smooth animation by toggling classes
         const currentTask = this.taskList.querySelector('.current-task');
-        
         if (currentTask) {
             currentTask.classList.remove('current-task');
         }
-        if (clickedTask) {
-            clickedTask.classList.add('current-task');
+        
+        if (taskId) {
+            const clickedTask = this.taskList.querySelector(`[data-id="${taskId}"]`);
+            if (clickedTask) {
+                clickedTask.classList.add('current-task');
+            }
+        }
+    }
+
+    formatTime(ms, lastStartTime) {
+        // If task is currently active, add the time since lastStartTime
+        if (lastStartTime) {
+            ms += (Date.now() - lastStartTime);
+        }
+        
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) {
+            return `${days}d`;
+        } else if (hours > 0) {
+            return `${hours}h`;
+        } else {
+            return `${minutes}m`;
         }
     }
 
@@ -395,6 +439,11 @@ class MatrixTodo {
     }
 
     render() {
+        // Add safety check for taskTimes
+        if (!this.taskTimes) {
+            this.taskTimes = {};
+        }
+
         // Group tasks and normalize group names
         const groupedTasks = this.tasks.reduce((acc, task) => {
             const group = task.group ? task.group.toUpperCase() : 'UNGROUPED';
@@ -414,16 +463,31 @@ class MatrixTodo {
                             ${group}
                         </div>
                     ` : ''}
-                    ${tasks.map(task => `
-                        <div class="task-item ${task.completed ? 'completed' : ''} 
-                            ${task.category} ${task.group ? 'grouped-task' : ''}
-                            ${task.id === this.currentTaskId ? 'current-task' : ''}" 
-                            data-id="${task.id}"
-                            draggable="true">
-                            <button class="delete-btn">×</button>
-                            <span>${task.text}</span>
-                        </div>
-                    `).join('')}
+                    ${tasks.map(task => {
+                        // Add safety checks
+                        const timeData = task && task.id && this.taskTimes[task.id];
+                        let timeDisplay = '';
+                        
+                        if (timeData) {
+                            const isCurrentTask = task.id === this.currentTaskId;
+                            timeDisplay = `<span class="task-time">${this.formatTime(
+                                timeData.totalTime || 0,
+                                isCurrentTask ? timeData.lastStartTime : null
+                            )}</span>`;
+                        }
+                        
+                        return `
+                            <div class="task-item ${task.completed ? 'completed' : ''} 
+                                ${task.category} ${task.group ? 'grouped-task' : ''}
+                                ${task.id === this.currentTaskId ? 'current-task' : ''}" 
+                                data-id="${task.id}"
+                                draggable="true">
+                                <button class="delete-btn">×</button>
+                                <span>${task.text}</span>
+                                ${timeDisplay}
+                            </div>
+                        `;
+                    }).join('')}
                 `;
             }).join('');
 
@@ -953,6 +1017,9 @@ class MatrixTodo {
 
         try {
             const date = new Date(task.timestamp).toLocaleDateString();
+            if (!this.taskHistory) {
+                this.taskHistory = {};
+            }
             if (!this.taskHistory[date]) {
                 this.taskHistory[date] = [];
             }

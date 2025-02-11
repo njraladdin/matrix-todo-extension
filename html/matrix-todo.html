@@ -956,7 +956,7 @@
     border-radius: 50%;
     background-color: var(--matrix-green);
     transform: translateY(-50%);
-    animation: dotPulse 2s infinite;
+    animation: dotPulse 5s infinite;
     box-shadow: 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
 }
 
@@ -1015,6 +1015,64 @@
 
 .task-list .current-task.completed span {
     background: none;
+}
+
+.task-time {
+    margin-left: 12px;
+    opacity: 0;  /* Hidden by default */
+    font-size: 0.5em;
+    letter-spacing: 0.5px;
+    color: rgba(var(--matrix-green-rgb), 0.7);
+    font-weight: 300;
+    transition: opacity 0.2s ease;  /* Smooth transition */
+}
+
+/* Show time on hover */
+.task-item:hover .task-time {
+    opacity: 0.6;
+}
+
+/* Show time for current task */
+.current-task .task-time {
+    opacity: 0.6;
+}
+
+/* Don't show time for completed tasks unless hovered */
+.task-item.completed .task-time {
+    opacity: 0;
+}
+
+.task-item.completed:hover .task-time {
+    opacity: 0.6;
+}
+
+/* Add new animation for text pulsing */
+@keyframes textPulse {
+    0% { 
+        opacity: 0.4;
+        text-shadow: 
+            0 0 2px rgba(var(--matrix-green-rgb), 0.2),
+            0 0 4px rgba(var(--matrix-green-rgb), 0.1);
+    }
+    50% { 
+        opacity: 0.6;
+        text-shadow: 
+            0 0 2px rgba(var(--matrix-green-rgb), 0.8),
+            0 0 4px rgba(var(--matrix-green-rgb), 0.4),
+            0 0 6px rgba(var(--matrix-green-rgb), 0.2);
+    }
+    100% { 
+        opacity: 0.4;
+        text-shadow: 
+            0 0 2px rgba(var(--matrix-green-rgb), 0.2),
+            0 0 4px rgba(var(--matrix-green-rgb), 0.1);
+    }
+}
+
+/* Update current task time animation */
+.current-task .task-time {
+    opacity: 0.6;
+    animation: textPulse 5s infinite;  /* Slower 3s animation */
 }
     </style>
 </head>
