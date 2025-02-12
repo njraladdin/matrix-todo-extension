@@ -2,7 +2,6 @@ import UpdateManager from './update-manager.js';
 
 class MatrixTodo {
     constructor() {
-        this.taskTimes = JSON.parse(localStorage.getItem('matrix-task-times')) || {};
         this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
         
         // Clean up any existing empty tasks
@@ -268,27 +267,6 @@ class MatrixTodo {
             taskId = null;
         }
         
-        // If there's a current task, save its end time
-        if (this.currentTaskId && this.currentTaskId !== taskId) {
-            const currentTime = this.taskTimes[this.currentTaskId] || {};
-            currentTime.lastEndTime = Date.now();
-            this.taskTimes[this.currentTaskId] = currentTime;
-            localStorage.setItem('matrix-task-times', JSON.stringify(this.taskTimes));
-        }
-        
-        // Set up timing for new current task
-        if (taskId && taskId !== this.currentTaskId) {
-            if (!this.taskTimes[taskId]) {
-                this.taskTimes[taskId] = {
-                    totalTime: 0,
-                    lastStartTime: Date.now()
-                };
-            } else {
-                this.taskTimes[taskId].lastStartTime = Date.now();
-            }
-            localStorage.setItem('matrix-task-times', JSON.stringify(this.taskTimes));
-        }
-        
         this.currentTaskId = taskId;
         localStorage.setItem('matrix-current-task', taskId);
         
@@ -306,11 +284,8 @@ class MatrixTodo {
         }
     }
 
-    formatTime(ms, lastStartTime) {
-        // If task is currently active, add the time since lastStartTime
-        if (lastStartTime) {
-            ms += (Date.now() - lastStartTime);
-        }
+    formatTime(timestamp) {
+        const ms = Date.now() - new Date(timestamp).getTime();
         
         const seconds = Math.floor(ms / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -333,12 +308,12 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
-        // Update regex to include hyphens in group names and normalize to uppercase
-        const groupMatch = text.match(/#([\w-]+)/);
+        // Update regex to use @ instead of # for group names
+        const groupMatch = text.match(/@([\w-]+)/);
         const group = groupMatch ? groupMatch[1].toUpperCase() : null;
         
         // Remove the group tag from the text and trim
-        text = text.replace(/#[\w-]+/, '').trim();
+        text = text.replace(/@[\w-]+/, '').trim();
 
         // If text is empty after removing tags, use [BLANK]
         if (!text) {
@@ -439,11 +414,6 @@ class MatrixTodo {
     }
 
     render() {
-        // Add safety check for taskTimes
-        if (!this.taskTimes) {
-            this.taskTimes = {};
-        }
-
         // Group tasks and normalize group names
         const groupedTasks = this.tasks.reduce((acc, task) => {
             const group = task.group ? task.group.toUpperCase() : 'UNGROUPED';
@@ -464,17 +434,7 @@ class MatrixTodo {
                         </div>
                     ` : ''}
                     ${tasks.map(task => {
-                        // Add safety checks
-                        const timeData = task && task.id && this.taskTimes[task.id];
-                        let timeDisplay = '';
-                        
-                        if (timeData) {
-                            const isCurrentTask = task.id === this.currentTaskId;
-                            timeDisplay = `<span class="task-time">${this.formatTime(
-                                timeData.totalTime || 0,
-                                isCurrentTask ? timeData.lastStartTime : null
-                            )}</span>`;
-                        }
+                        const timeDisplay = `<span class="task-time">${this.formatTime(task.timestamp)}</span>`;
                         
                         return `
                             <div class="task-item ${task.completed ? 'completed' : ''} 
@@ -523,17 +483,17 @@ class MatrixTodo {
             this.ghostTextElement.textContent = inputText + 'nt';
         } else if (inputText.endsWith('!urgen')) {
             this.ghostTextElement.textContent = inputText + 't';
-        } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('#')) {
+        } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('@')) {
             // Show both suggestions if neither exists
-            const suggestion = inputText.endsWith(' ') ? '!urgent #group_name' : ' !urgent #group_name';
+            const suggestion = inputText.endsWith(' ') ? '!urgent @<group_name>' : ' !urgent @<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else if (inputText && !inputText.includes('!urgent')) {
-            // Show only !urgent if # exists but !urgent doesn't
+            // Show only !urgent if @ exists but !urgent doesn't
             const suggestion = inputText.endsWith(' ') ? '!urgent' : ' !urgent';
             this.ghostTextElement.textContent = inputText + suggestion;
-        } else if (inputText && !inputText.includes('#')) {
-            // Show only #group_name if !urgent exists but # doesn't
-            const suggestion = inputText.endsWith(' ') ? '#group_name' : ' #group_name';
+        } else if (inputText && !inputText.includes('@')) {
+            // Show only @<group_name> if !urgent exists but @ doesn't
+            const suggestion = inputText.endsWith(' ') ? '@<group_name>' : ' @<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else {
             this.ghostTextElement.textContent = '';
@@ -1054,7 +1014,7 @@ class MatrixTodo {
                                     ${new Date(task.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </span>
                                 <span class="history-text">${task.text}</span>
-                                ${task.group ? `<span class="history-group">#${task.group}</span>` : ''}
+                                ${task.group ? `<span class="history-group">@${task.group}</span>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -1067,14 +1027,14 @@ class MatrixTodo {
 
     showGroupSuggestions() {
         const inputText = this.taskInput.value;
-        const hashIndex = inputText.lastIndexOf('#');
+        const atIndex = inputText.lastIndexOf('@');
         
-        if (hashIndex === -1) {
+        if (atIndex === -1) {
             this.suggestionsDropdown.style.display = 'none';
             return;
         }
 
-        const groupPrefix = inputText.slice(hashIndex + 1).toLowerCase();
+        const groupPrefix = inputText.slice(atIndex + 1).toLowerCase();
         
         // Get existing groups from tasks and normalize them
         const existingGroups = [...new Set(this.tasks
@@ -1111,10 +1071,10 @@ class MatrixTodo {
 
     selectGroupSuggestion(groupName) {
         const inputText = this.taskInput.value;
-        const hashIndex = inputText.lastIndexOf('#');
+        const atIndex = inputText.lastIndexOf('@');
         
         // Replace the partial group name with the selected one and add a space
-        this.taskInput.value = inputText.slice(0, hashIndex + 1) + groupName + ' ';
+        this.taskInput.value = inputText.slice(0, atIndex + 1) + groupName + ' ';
         
         // Hide dropdown
         this.suggestionsDropdown.style.display = 'none';

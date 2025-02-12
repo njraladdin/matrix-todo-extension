@@ -110,7 +110,7 @@ class UpdateManager {
                 id: 'groups-update',
                 title: 'NEW FEATURES AVAILABLE',
                 features: [
-                    'Add <span style="color: #FFD700">#group_name</span> to organize related tasks',
+                    'Add <span style="color: #FFD700">#<group_name></span> to organize related tasks',
                 ],
                 preview: `
                     <style>
