@@ -3,7 +3,7 @@
 - remove clearing shortcut, done 
 - update twitter tag, done 
 
-- Settings is not visible 
+- Settings is not visible, done 
 - tasks in backlog group are not counted in progress 
 - able to drag tasks between groups 
 - add "how to use" section 
