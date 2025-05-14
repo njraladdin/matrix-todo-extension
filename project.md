@@ -5,6 +5,7 @@
 - Settings is not visible, done 
 - tasks in backlog group are not counted in progress, done 
 
-- able to drag tasks between groups 
+- able to drag tasks between groups, done 
+
 - add "how to use" section 
 - switch button to diagram 

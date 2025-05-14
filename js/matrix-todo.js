@@ -534,7 +534,7 @@ class MatrixTodo {
         const taskItem = e.target.closest('.task-item');
         if (!taskItem) return;
         
-        taskItem.classList.remove('dragging', 'lift');
+        taskItem.classList.remove('dragging', 'lift', 'dragging-between-groups');
         this.taskList.classList.remove('dragging-active');
         document.body.classList.remove('matrix-rain-active');
     }
@@ -546,7 +546,7 @@ class MatrixTodo {
         
         if (!draggingItem) return;
         
-        // Get groups of both items
+        // Get groups of both items (for debugging/logging purposes only)
         const getDraggingGroup = (element) => {
             let current = element;
             while (current) {
@@ -561,25 +561,24 @@ class MatrixTodo {
         const draggingGroup = getDraggingGroup(draggingItem);
         const targetGroup = taskItem ? getDraggingGroup(taskItem) : null;
 
+        // Check if dragging between groups and add special visual effect
+        const isDraggingBetweenGroups = draggingGroup !== targetGroup;
+        if (isDraggingBetweenGroups) {
+            draggingItem.classList.add('dragging-between-groups');
+        } else {
+            draggingItem.classList.remove('dragging-between-groups');
+        }
+
         console.log('Drag groups:', {
             draggingGroup,
             targetGroup,
             draggingText: draggingItem.textContent,
-            targetText: taskItem?.textContent
+            targetText: taskItem?.textContent,
+            isDraggingBetweenGroups
         });
 
-        // Only allow drag if:
-        // 1. Both items are ungrouped (both groups null)
-        // 2. Both items are in the same group
+        // Allow dragging between any groups
         if (taskItem && taskItem !== draggingItem) {
-            const canDrop = (draggingGroup === null && targetGroup === null) || 
-                           (draggingGroup === targetGroup);
-
-            if (!canDrop) {
-                console.log('Drag prevented - items in different groups');
-                return;
-            }
-
             const rect = taskItem.getBoundingClientRect();
             const threshold = rect.top + rect.height / 2;
             
@@ -599,6 +598,26 @@ class MatrixTodo {
         
         const taskId = droppedTask.dataset.id;
         
+        // Determine the new group for the task based on its position in the DOM
+        const findGroupHeader = (element) => {
+            let current = element;
+            while (current && current.previousElementSibling) {
+                current = current.previousElementSibling;
+                if (current.classList.contains('group-header')) {
+                    return current.textContent.trim().toUpperCase();
+                }
+            }
+            return null; // Default to no group (UNGROUPED)
+        };
+
+        // Find the task object and update its group
+        const task = this.tasks.find(t => t.id === taskId);
+        if (task) {
+            const newGroup = findGroupHeader(droppedTask);
+            console.log(`Updating task ${task.text} group from ${task.group || 'UNGROUPED'} to ${newGroup || 'UNGROUPED'}`);
+            task.group = newGroup;
+        }
+        
         // Get the new order of all tasks from the DOM
         const newTaskOrder = Array.from(this.taskList.querySelectorAll('.task-item'))
             .map(item => {
@@ -612,6 +631,14 @@ class MatrixTodo {
         
         // Force a re-render to ensure consistent grouping
         this.render();
+
+        // Update task in Firebase if enabled
+        if (this.isGlobalEnabled && task) {
+            this.sandbox.contentWindow.postMessage({ 
+                type: "updateTask", 
+                task: task 
+            }, "*");
+        }
     }
 
     loadTasksFromFirebase() {
