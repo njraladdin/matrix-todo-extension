@@ -1,13 +1,99 @@
-class UpdateManager {
+class WhatsNewModal {
     constructor() {
         this.updates = {
+            'backlog-group-update': {
+                id: 'backlog-group-update',
+                title: 'BACKLOG GROUP',
+                features: [
+                    'Use #backlog for future tasks - these are excluded from progress calculation',
+                ],
+                preview: `
+                    <style>
+                        .backlog-preview {
+                            margin: 32px 0 24px;
+                            font-family: monospace;
+                            color: var(--matrix-green);
+                            position: relative;
+                        }
+                        
+                        .progress-mock {
+                            display: flex;
+                            gap: 4px;
+                            margin-bottom: 12px;
+                        }
+                        
+                        .progress-block-mock {
+                            width: 20px;
+                            height: 20px;
+                            background-color: rgba(var(--matrix-green-rgb), 0.2);
+                        }
+                        
+                        .progress-block-mock.filled {
+                            background-color: var(--matrix-green);
+                            box-shadow: 
+                                0 0 4px rgba(var(--matrix-green-rgb), 0.9),
+                                0 0 8px rgba(var(--matrix-green-rgb), 0.5);
+                        }
+                        
+                        .progress-text-mock {
+                            font-size: 14px;
+                            margin-bottom: 20px;
+                            opacity: 0.8;
+                        }
+                        
+                        .tasks-container {
+                            margin-top: 20px;
+                        }
+                        
+                        .group-header-mock {
+                            color: var(--matrix-green);
+                            font-size: 13px;
+                            margin: 20px 0 8px 0;
+                            opacity: 0.4;
+                            letter-spacing: 2px;
+                        }
+                        
+                        .task-item-mock {
+                            margin-left: 12px;
+                            border-left: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+                            padding: 8px 12px;
+                            font-size: 14px;
+                            opacity: 0.7;
+                        }
+                        
+                        .task-item-mock.completed {
+                            text-decoration: line-through;
+                            opacity: 0.4;
+                        }
+                        
+                        .info-text {
+                            margin-top: 20px;
+                            font-size: 12px;
+                            opacity: 0.6;
+                            font-style: italic;
+                            text-align: center;
+                        }
+                    </style>
+                    <div class="backlog-preview">
+                     
+                        
+                        <div class="tasks-container">
+                            
+                            <div class="group-header-mock">BACKLOG</div>
+                            <div class="task-item-mock">IMPLEMENT OAUTH INTEGRATION</div>
+                            <div class="task-item-mock">CREATE ADMIN DASHBOARD</div>
+                        </div>
+                        
+                        <div class="info-text">Backlog tasks are not counted in progress (50%)</div>
+                    </div>
+                `
+            },
             'notes-update': {
                 id: 'notes-update',
-                title: 'NEW FEATURES AVAILABLE',
+                title: 'FLOATING NOTES',
                 features: [
-                    'Introducing Notes:',
-                    '• Right-click anywhere to create floating notes',
-                    '• Drag notes to reposition them'
+                    'Right-click to add a new note',
+                    'Drag to reposition notes'
                 ],
                 preview: `
                     <style>
@@ -98,7 +184,7 @@ class UpdateManager {
                             <div class="menu-item">Inspect</div>
                             <div class="menu-item separator"></div>
                             <div class="menu-item highlight">
-                                <img src="icons/icon16.png" alt="Matrix Todo">
+                                <img src="../icons/icon16.png" alt="Matrix Todo">
                                 <span>Add Matrix Note</span>
                                 <div class="cursor"></div>
                             </div>
@@ -108,9 +194,10 @@ class UpdateManager {
             },
             'groups-update': {
                 id: 'groups-update',
-                title: 'NEW FEATURES AVAILABLE',
+                title: 'TASK GROUPS',
                 features: [
-                    'Add <span style="color: #FFD700">#<group_name></span> to organize related tasks',
+                    'Organize related tasks with groups',
+                    'Add #group_name to your task',
                 ],
                 preview: `
                     <style>
@@ -281,10 +368,10 @@ class UpdateManager {
             },
             'current-task-update': {
                 id: 'current-task-update',
-                title: 'NEW FEATURES AVAILABLE',
+                title: 'CURRENT TASK TRACKING',
                 features: [
-                    'NEW: WHICH TASK ARE YOU WORKING ON?',
-                    '• RIGHT-CLICK TASK TO SET/UNSET CURRENT'
+                    'Right-click task → Set as Current Task',
+                    'Right-click again to unset current task'
                 ],
                 preview: `
                     <style>
@@ -440,8 +527,8 @@ class UpdateManager {
         const unseenUpdates = Object.values(this.updates).filter(update => !seenUpdates[update.id]);
         
         if (unseenUpdates.length > 0) {
-            // Show the What's New modal automatically for unseen updates
-            this.showWhatsNewModal(unseenUpdates);
+            // Show the full What's New modal with all updates when new ones are available
+            this.showWhatsNewModal();
             
             // Mark all updates as seen
             unseenUpdates.forEach(update => {
@@ -451,9 +538,9 @@ class UpdateManager {
         }
     }
 
-    showWhatsNewModal(specificUpdates = null) {
-        // Either show specific updates or show all updates
-        const updatesToShow = specificUpdates || Object.values(this.updates);
+    showWhatsNewModal() {
+        // Always show all updates
+        const updatesToShow = Object.values(this.updates);
         
         // Make sure updates-popup div exists
         let popup = document.querySelector('.updates-popup');
@@ -470,8 +557,13 @@ class UpdateManager {
                 ${updatesToShow.map(update => `
                     <div class="update-item">
                         <h3>${update.title}</h3>
-                        ${update.features.map(feature => `<p>${feature}</p>`).join('')}
-                        ${update.preview}
+                        <ul class="feature-list">
+                            ${update.features.map(feature => `<li>${feature}</li>`).join('')}
+                        </ul>
+                        <div class="preview-container">
+                            <div class="preview-label">PREVIEW</div>
+                            ${update.preview}
+                        </div>
                     </div>
                 `).join('<hr style="opacity: 0.3; margin: 20px 0;">')}
             </div>
@@ -600,4 +692,4 @@ class UpdateManager {
     }
 }
 
-export default UpdateManager; 
+export default WhatsNewModal; 

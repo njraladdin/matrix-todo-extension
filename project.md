@@ -6,5 +6,5 @@
 - tasks in backlog group are not counted in progress, done 
 - able to drag tasks between groups, done 
 
-- add "how to use" section 
+- change update manager to whats new modal, done 
 - switch button to diagram 

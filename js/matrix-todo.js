@@ -1,4 +1,4 @@
-import UpdateManager from './update-manager.js';
+import WhatsNewModal from './whats-new-modal.js';
 
 class MatrixTodo {
     constructor() {
@@ -142,8 +142,8 @@ class MatrixTodo {
         });
 
         // Initialize the What's New system
-        this.updateManager = new UpdateManager();
-        this.updateManager.checkForUpdates();
+        this.whatsNewModal = new WhatsNewModal();
+        this.whatsNewModal.checkForUpdates();
 
         this.taskHistory = {};
         const savedHistory = localStorage.getItem('matrix-tasks-history');
