@@ -1,0 +1,9 @@
+- remove datetime from note 
+- replace '@' usage with hashtab
+- remove clearing shortcut 
+- update twitter tag  
+- Settings is not visible 
+- tasks in backlog group are not counted in progress 
+- able to drag tasks between groups 
+- add "how to use" section 
+- switch button to diagram 

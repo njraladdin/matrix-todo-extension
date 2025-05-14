@@ -854,7 +854,6 @@ class MatrixTodo {
                     data-id="${note.id}" 
                     style="visibility: visible; transform: translate(${position.x}px, ${position.y}px);">
                     <div class="note-header">
-                        <span class="note-timestamp">${new Date(note.timestamp).toLocaleString()}</span>
                         <button class="delete-note">×</button>
                     </div>
                     <textarea placeholder="ENTER NOTE">${note.content || ''}</textarea>
