@@ -144,14 +144,6 @@ class MatrixTodo {
         this.updateManager = new UpdateManager();
         this.updateManager.checkForUpdates();
 
-        // Add keyboard shortcut for clearing completed tasks
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
-                e.preventDefault();
-                this.clearCompleted();
-            }
-        });
-
         this.taskHistory = {};
         const savedHistory = localStorage.getItem('matrix-tasks-history');
         if (savedHistory) {
