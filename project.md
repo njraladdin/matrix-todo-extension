@@ -1,8 +1,8 @@
 - remove datetime from note, done 
 - replace '@' usage with hashtab, done 
 - remove clearing shortcut, done 
+- update twitter tag, done 
 
-- update twitter tag  
 - Settings is not visible 
 - tasks in backlog group are not counted in progress 
 - able to drag tasks between groups 
