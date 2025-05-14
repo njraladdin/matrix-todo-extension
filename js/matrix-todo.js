@@ -372,26 +372,45 @@ class MatrixTodo {
     }
 
     updateProgress() {
+        // Filter out tasks in the 'BACKLOG' group (case-insensitive)
+        const nonBacklogTasks = this.tasks.filter(t => 
+            !t.group || t.group.toUpperCase() !== 'BACKLOG'
+        );
+        
         console.log('All tasks:', this.tasks.map(t => ({
             text: t.text,
             completed: t.completed,
             group: t.group
         })));
         
-        const totalTasks = this.tasks.length;
-        const completedTasks = this.tasks.filter(t => t.completed).length;
+        console.log('Non-backlog tasks:', nonBacklogTasks.map(t => ({
+            text: t.text,
+            completed: t.completed,
+            group: t.group
+        })));
         
-        console.log('Progress calculation:', {
+        // Calculate completion based only on non-backlog tasks
+        const totalTasks = nonBacklogTasks.length;
+        const completedTasks = nonBacklogTasks.filter(t => t.completed).length;
+        
+        console.log('Progress calculation (excluding BACKLOG):', {
             totalTasks,
             completedTasks,
             percentage: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0
         });
 
-        const percentage = this.tasks.length 
-            ? Math.round((this.tasks.filter(t => t.completed).length / this.tasks.length) * 100)
+        // Calculate percentage based on non-backlog tasks
+        const percentage = totalTasks 
+            ? Math.round((completedTasks / totalTasks) * 100)
             : 0;
         
-        this.progressText.textContent = `${percentage}% COMPLETE`;
+        // Check if backlog tasks exist
+        const hasBacklogTasks = this.tasks.some(t => t.group && t.group.toUpperCase() === 'BACKLOG');
+        
+        // Add note about BACKLOG tasks being excluded if they exist
+      
+            this.progressText.textContent = `${percentage}% COMPLETE`;
+        
         
         const blocks = this.progressBar.children;
         const filledBlocks = Math.floor(percentage / 10);
@@ -930,11 +949,20 @@ class MatrixTodo {
     }
 
     clearCompleted() {
+        // Store the IDs of completed tasks before removing them
+        const completedTaskIds = this.tasks
+            .filter(task => task.completed)
+            .map(task => task.id);
+        
+        // Remove completed tasks from the tasks array
         this.tasks = this.tasks.filter(task => !task.completed);
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
-        this.tasks.forEach(task => {
-            this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: task.id }, "*");
+        
+        // Send delete messages for all completed tasks
+        completedTaskIds.forEach(taskId => {
+            this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId }, "*");
         });
+        
         this.render();
     }
 

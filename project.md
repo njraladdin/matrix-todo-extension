@@ -2,9 +2,9 @@
 - replace '@' usage with hashtab, done 
 - remove clearing shortcut, done 
 - update twitter tag, done 
-
 - Settings is not visible, done 
-- tasks in backlog group are not counted in progress 
+- tasks in backlog group are not counted in progress, done 
+
 - able to drag tasks between groups 
 - add "how to use" section 
 - switch button to diagram 
