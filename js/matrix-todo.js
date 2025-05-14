@@ -141,6 +141,7 @@ class MatrixTodo {
             }
         });
 
+        // Initialize the What's New system
         this.updateManager = new UpdateManager();
         this.updateManager.checkForUpdates();
 

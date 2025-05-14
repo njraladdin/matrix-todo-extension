@@ -570,7 +570,10 @@
             border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
             padding: 32px;
             z-index: 1000;
-            width: 500px;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
             box-shadow: 
                 0 0 40px rgba(0, 0, 0, 0.6),
                 inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05);
@@ -584,6 +587,14 @@
             opacity: 0.9;
             text-shadow: 
                 0 0 2px rgba(var(--matrix-green-rgb), 0.4);
+        }
+
+        .updates-popup h3 {
+            color: var(--matrix-green);
+            margin: 10px 0;
+            font-size: 14px;
+            letter-spacing: 1.5px;
+            opacity: 0.8;
         }
 
         .updates-popup p {
@@ -607,12 +618,42 @@
             width: 100%;
             transition: all 0.2s ease;
             opacity: 0.8;
+            margin-top: 20px;
         }
 
         .updates-popup button:hover {
             background: rgba(var(--matrix-green-rgb), 0.05);
             border-color: rgba(var(--matrix-green-rgb), 0.3);
             opacity: 1;
+        }
+
+        .update-item {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+        }
+
+        .updates-content {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 15px;
+            margin-right: -15px;
+        }
+
+        /* Scrollbar for updates content */
+        .updates-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .updates-content::-webkit-scrollbar-track {
+            background: rgba(var(--matrix-green-rgb), 0.1);
+        }
+
+        .updates-content::-webkit-scrollbar-thumb {
+            background: rgba(var(--matrix-green-rgb), 0.3);
+        }
+
+        .updates-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(var(--matrix-green-rgb), 0.5);
         }
 
         .group-header {
@@ -659,6 +700,27 @@
         .settings-wheel:hover {
             opacity: 1;
             text-decoration: underline;
+        }
+
+        .whats-new-button {
+            position: static;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+            font-size: 10px;
+            order: 0;
+        }
+
+        .whats-new-button:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        /* Update separator style to account for the new button */
+        .shortcut-hint > *:not(:last-child)::after {
+            content: "•";
+            margin: 0 12px;
+            opacity: 0.6;
         }
 
         .settings-modal {
@@ -720,13 +782,6 @@
 
         .close-settings:hover {
             opacity: 1;
-        }
-
-        /* Add separator style */
-        .shortcut-hint > *:not(:last-child)::after {
-            content: "•";
-            margin: 0 12px;
-            opacity: 0.6;
         }
 
         .settings-section {
@@ -1090,14 +1145,7 @@
         <div class="task-list"></div>
         <div class="notes-overlay"></div>
         <div class="updates-popup" style="display: none;">
-            <h2>SYSTEM UPDATE</h2>
-            <div class="update-content">
-                <p>NEW: FLOATING NOTES</p>
-                <p>• RIGHT-CLICK TO CREATE</p>
-                <p>• DRAG TO REPOSITION</p>
-                <p>• AUTO-SAVE ENABLED</p>
-            </div>
-            <button id="closeUpdates">INITIALIZE</button>
+            <!-- Content will be dynamically populated by UpdateManager -->
         </div>
     </div>
     <div class="settings-modal">
@@ -1121,6 +1169,7 @@
     </div>
     <div class="shortcut-hint">
         <div class="settings-wheel">[SETTINGS]</div>
+        <div class="whats-new-button">[WHAT'S NEW]</div>
         <span class="attribution">MADE BY <a href="https://x.com/njraladdin" target="_blank">@njraladdin</a></span>
     </div>
     <script src="matrix-bg.js"></script>

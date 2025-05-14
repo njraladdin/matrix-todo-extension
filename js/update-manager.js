@@ -410,6 +410,26 @@ class UpdateManager {
                 `
             }
         };
+        
+        // Initialize the What's New button
+        this.initializeWhatsNewButton();
+    }
+
+    initializeWhatsNewButton() {
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupWhatsNewButton());
+        } else {
+            this.setupWhatsNewButton();
+        }
+    }
+
+    setupWhatsNewButton() {
+        // Add click event to the existing button
+        const whatsNewButton = document.querySelector('.whats-new-button');
+        if (whatsNewButton) {
+            whatsNewButton.addEventListener('click', () => this.showWhatsNewModal());
+        }
     }
 
     checkForUpdates() {
@@ -420,53 +440,73 @@ class UpdateManager {
         const unseenUpdates = Object.values(this.updates).filter(update => !seenUpdates[update.id]);
         
         if (unseenUpdates.length > 0) {
-            let currentUpdateIndex = 0;
+            // Show the What's New modal automatically for unseen updates
+            this.showWhatsNewModal(unseenUpdates);
             
-            const showNextUpdate = () => {
-                const update = unseenUpdates[currentUpdateIndex];
-                this.showUpdatePopup(update, () => {
-                    // Mark this update as seen
-                    seenUpdates[update.id] = true;
-                    localStorage.setItem('matrix-todo-seen-updates', JSON.stringify(seenUpdates));
-                    
-                    // Show next update if available
-                    currentUpdateIndex++;
-                    if (currentUpdateIndex < unseenUpdates.length) {
-                        showNextUpdate();
-                    }
-                });
-            };
-            
-            showNextUpdate();
+            // Mark all updates as seen
+            unseenUpdates.forEach(update => {
+                seenUpdates[update.id] = true;
+            });
+            localStorage.setItem('matrix-todo-seen-updates', JSON.stringify(seenUpdates));
         }
     }
 
-    showUpdatePopup(update, onClose) {
-        const popup = document.querySelector('.updates-popup');
-        if (!popup) return;
-
-        // Update popup content
-        popup.innerHTML = `
-            <h2>${update.title}</h2>
-            ${update.features.map(feature => `<p>${feature}</p>`).join('')}
-            ${update.preview}
-            <button id="closeUpdates">GOT IT</button>
-        `;
-
-        // Initialize appropriate animation
-        if (update.id === 'current-task-update') {
-            this.initializeCurrentTaskAnimation();
-        } else if (update.id === 'groups-update') {
-            this.initializeGroupsAnimation();
+    showWhatsNewModal(specificUpdates = null) {
+        // Either show specific updates or show all updates
+        const updatesToShow = specificUpdates || Object.values(this.updates);
+        
+        // Make sure updates-popup div exists
+        let popup = document.querySelector('.updates-popup');
+        if (!popup) {
+            popup = document.createElement('div');
+            popup.className = 'updates-popup';
+            document.body.appendChild(popup);
         }
 
+        // Create the new modal content
+        popup.innerHTML = `
+            <h2>WHAT'S NEW</h2>
+            <div class="updates-content">
+                ${updatesToShow.map(update => `
+                    <div class="update-item">
+                        <h3>${update.title}</h3>
+                        ${update.features.map(feature => `<p>${feature}</p>`).join('')}
+                        ${update.preview}
+                    </div>
+                `).join('<hr style="opacity: 0.3; margin: 20px 0;">')}
+            </div>
+            <button id="closeUpdates">CLOSE</button>
+        `;
+
+        // Initialize animations for each update
+        updatesToShow.forEach(update => {
+            if (update.id === 'current-task-update') {
+                this.initializeCurrentTaskAnimation();
+            } else if (update.id === 'groups-update') {
+                this.initializeGroupsAnimation();
+            }
+        });
+
+        // Show the modal
         popup.style.display = 'block';
 
+        // Add close handler
         const closeButton = document.getElementById('closeUpdates');
         closeButton.addEventListener('click', () => {
             popup.style.display = 'none';
-            onClose();
         });
+        
+        // Close when clicking outside - removing old listeners first
+        const handleOutsideClick = (e) => {
+            if (e.target === popup) {
+                popup.style.display = 'none';
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        };
+        
+        // Remove any previous instances of the click handler
+        document.removeEventListener('click', handleOutsideClick);
+        document.addEventListener('click', handleOutsideClick);
     }
 
     initializeGroupsAnimation() {
@@ -535,6 +575,8 @@ class UpdateManager {
     initializeCurrentTaskAnimation() {
         const taskItem = document.querySelector('.demo-task-item');
         const menu = document.querySelector('.demo-menu');
+        
+        if (!taskItem || !menu) return;
         
         // Animation sequence
         const animate = () => {
