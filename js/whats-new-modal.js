@@ -503,20 +503,13 @@ class WhatsNewModal {
     }
 
     initializeWhatsNewButton() {
-        // Wait for DOM to be fully loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setupWhatsNewButton());
-        } else {
-            this.setupWhatsNewButton();
-        }
+        // This is now handled in matrix-todo.js directly
+        console.log("WhatsNewModal: initialization completed");
     }
 
     setupWhatsNewButton() {
-        // Add click event to the existing button
-        const whatsNewButton = document.querySelector('.whats-new-button');
-        if (whatsNewButton) {
-            whatsNewButton.addEventListener('click', () => this.showWhatsNewModal());
-        }
+        // This functionality is now handled in matrix-todo.js
+        console.log("WhatsNewModal: setupWhatsNewButton method is deprecated");
     }
 
     checkForUpdates() {
@@ -539,35 +532,41 @@ class WhatsNewModal {
     }
 
     showWhatsNewModal() {
+        console.log("WhatsNewModal: showWhatsNewModal called");
+        
         // Always show all updates
         const updatesToShow = Object.values(this.updates);
         
-        // Make sure updates-popup div exists
-        let popup = document.querySelector('.updates-popup');
+        // Get the updates popup element
+        const popup = document.querySelector('.updates-popup');
         if (!popup) {
-            popup = document.createElement('div');
-            popup.className = 'updates-popup';
-            document.body.appendChild(popup);
+            console.error("WhatsNewModal: updates-popup element not found in the DOM");
+            return;
         }
-
-        // Create the new modal content
-        popup.innerHTML = `
-            <h2>WHAT'S NEW</h2>
-            <div class="updates-content">
-                ${updatesToShow.map(update => `
-                    <div class="update-item">
-                        <h3>${update.title}</h3>
-                        <ul class="feature-list">
-                            ${update.features.map(feature => `<li>${feature}</li>`).join('')}
-                        </ul>
-                        <div class="preview-container">
-                            <div class="preview-label">PREVIEW</div>
-                            ${update.preview}
-                        </div>
+        
+        // Get the content container
+        const updatesContent = popup.querySelector('.updates-content');
+        if (!updatesContent) {
+            console.error("WhatsNewModal: updates-content element not found in the popup");
+            return;
+        }
+        
+        console.log("WhatsNewModal: All required elements found, updating content");
+        
+        // Create the updates content
+        updatesContent.innerHTML = `
+            ${updatesToShow.map(update => `
+                <div class="update-item">
+                    <h3>${update.title}</h3>
+                    <ul class="feature-list">
+                        ${update.features.map(feature => `<li>${feature}</li>`).join('')}
+                    </ul>
+                    <div class="preview-container">
+                        <div class="preview-label">PREVIEW</div>
+                        ${update.preview}
                     </div>
-                `).join('<hr style="opacity: 0.3; margin: 20px 0;">')}
-            </div>
-            <button id="closeUpdates">CLOSE</button>
+                </div>
+            `).join('<hr style="opacity: 0.3; margin: 20px 0;">')}
         `;
 
         // Initialize animations for each update
@@ -580,18 +579,24 @@ class WhatsNewModal {
         });
 
         // Show the modal
-        popup.style.display = 'block';
+        popup.classList.add('active');
 
-        // Add close handler
-        const closeButton = document.getElementById('closeUpdates');
-        closeButton.addEventListener('click', () => {
-            popup.style.display = 'none';
+        // Make sure close button has event listener
+        const closeButton = popup.querySelector('.close-updates');
+        
+        // Remove any existing event listeners (to prevent duplicates)
+        const newCloseButton = closeButton.cloneNode(true);
+        closeButton.parentNode.replaceChild(newCloseButton, closeButton);
+        
+        // Add event listener to the new button
+        newCloseButton.addEventListener('click', () => {
+            popup.classList.remove('active');
         });
         
         // Close when clicking outside - removing old listeners first
         const handleOutsideClick = (e) => {
             if (e.target === popup) {
-                popup.style.display = 'none';
+                popup.classList.remove('active');
                 document.removeEventListener('click', handleOutsideClick);
             }
         };

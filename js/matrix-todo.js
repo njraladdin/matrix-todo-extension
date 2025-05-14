@@ -145,6 +145,17 @@ class MatrixTodo {
         this.whatsNewModal = new WhatsNewModal();
         this.whatsNewModal.checkForUpdates();
 
+        // Set up What's New button click handler
+        const whatsNewButton = document.querySelector('.whats-new-button');
+        if (whatsNewButton) {
+            whatsNewButton.addEventListener('click', () => {
+                console.log('What\'s New button clicked!');
+                this.whatsNewModal.showWhatsNewModal();
+            });
+        } else {
+            console.error('What\'s New button not found!');
+        }
+
         this.taskHistory = {};
         const savedHistory = localStorage.getItem('matrix-tasks-history');
         if (savedHistory) {
