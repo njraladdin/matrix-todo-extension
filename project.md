@@ -1,5 +1,5 @@
-- remove datetime from note 
-- replace '@' usage with hashtab
+- remove datetime from note, done 
+- replace '@' usage with hashtab, done 
 - remove clearing shortcut 
 - update twitter tag  
 - Settings is not visible 

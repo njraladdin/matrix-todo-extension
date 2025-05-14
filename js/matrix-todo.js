@@ -308,12 +308,12 @@ class MatrixTodo {
             text = text.replace('!urgent', '').trim();
         }
 
-        // Update regex to use @ instead of # for group names
-        const groupMatch = text.match(/@([\w-]+)/);
+        // Use # for group names instead of @
+        const groupMatch = text.match(/#([\w-]+)/);
         const group = groupMatch ? groupMatch[1].toUpperCase() : null;
         
         // Remove the group tag from the text and trim
-        text = text.replace(/@[\w-]+/, '').trim();
+        text = text.replace(/#[\w-]+/, '').trim();
 
         // If text is empty after removing tags, use [BLANK]
         if (!text) {
@@ -483,17 +483,17 @@ class MatrixTodo {
             this.ghostTextElement.textContent = inputText + 'nt';
         } else if (inputText.endsWith('!urgen')) {
             this.ghostTextElement.textContent = inputText + 't';
-        } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('@')) {
+        } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('#')) {
             // Show both suggestions if neither exists
-            const suggestion = inputText.endsWith(' ') ? '!urgent @<group_name>' : ' !urgent @<group_name>';
+            const suggestion = inputText.endsWith(' ') ? '!urgent #<group_name>' : ' !urgent #<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else if (inputText && !inputText.includes('!urgent')) {
-            // Show only !urgent if @ exists but !urgent doesn't
+            // Show only !urgent if # exists but !urgent doesn't
             const suggestion = inputText.endsWith(' ') ? '!urgent' : ' !urgent';
             this.ghostTextElement.textContent = inputText + suggestion;
-        } else if (inputText && !inputText.includes('@')) {
-            // Show only @<group_name> if !urgent exists but @ doesn't
-            const suggestion = inputText.endsWith(' ') ? '@<group_name>' : ' @<group_name>';
+        } else if (inputText && !inputText.includes('#')) {
+            // Show only #<group_name> if !urgent exists but # doesn't
+            const suggestion = inputText.endsWith(' ') ? '#<group_name>' : ' #<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else {
             this.ghostTextElement.textContent = '';
@@ -1013,7 +1013,7 @@ class MatrixTodo {
                                     ${new Date(task.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </span>
                                 <span class="history-text">${task.text}</span>
-                                ${task.group ? `<span class="history-group">@${task.group}</span>` : ''}
+                                ${task.group ? `<span class="history-group">#${task.group}</span>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -1026,14 +1026,14 @@ class MatrixTodo {
 
     showGroupSuggestions() {
         const inputText = this.taskInput.value;
-        const atIndex = inputText.lastIndexOf('@');
+        const hashIndex = inputText.lastIndexOf('#');
         
-        if (atIndex === -1) {
+        if (hashIndex === -1) {
             this.suggestionsDropdown.style.display = 'none';
             return;
         }
 
-        const groupPrefix = inputText.slice(atIndex + 1).toLowerCase();
+        const groupPrefix = inputText.slice(hashIndex + 1).toLowerCase();
         
         // Get existing groups from tasks and normalize them
         const existingGroups = [...new Set(this.tasks
@@ -1070,10 +1070,10 @@ class MatrixTodo {
 
     selectGroupSuggestion(groupName) {
         const inputText = this.taskInput.value;
-        const atIndex = inputText.lastIndexOf('@');
+        const hashIndex = inputText.lastIndexOf('#');
         
         // Replace the partial group name with the selected one and add a space
-        this.taskInput.value = inputText.slice(0, atIndex + 1) + groupName + ' ';
+        this.taskInput.value = inputText.slice(0, hashIndex + 1) + groupName + ' ';
         
         // Hide dropdown
         this.suggestionsDropdown.style.display = 'none';
