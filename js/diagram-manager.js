@@ -160,7 +160,7 @@ class DiagramManager {
         
         const node = {
             id: `node-${this.nextNodeId++}`,
-            content: 'NODE',
+            content: '', // Empty content instead of 'NODE'
             position: {
                 x: relX,
                 y: relY
@@ -209,7 +209,6 @@ class DiagramManager {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-node-btn';
         deleteBtn.textContent = '×';
-        deleteBtn.style.zIndex = '15';
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent event bubbling
             this.deleteNode(node.id);

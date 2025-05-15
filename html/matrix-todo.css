@@ -1343,15 +1343,16 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     background: none;
     border: none;
     color: var(--matrix-green);
-    font-size: 24px;
+    font-size: 14px;
     cursor: pointer !important;
-    opacity: 0.8;
+    opacity: 0.3;
     transition: opacity 0.3s ease;
     z-index: 15;
+    padding: 4px 8px;
 }
 
 .delete-node-btn:hover {
-    opacity: 1;
+    opacity: 0.6;
 }
 
 .connection-handle {
