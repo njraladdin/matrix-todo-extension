@@ -1,6 +1,86 @@
 class WhatsNewModal {
     constructor() {
         this.updates = {
+            'diagram-update': {
+                id: 'diagram-update',
+                title: 'DIAGRAM FEATURE',
+                features: [
+                    'Right-click to create diagram nodes',
+                    'Connect nodes with drag handles',
+                ],
+                preview: `
+                    <style>
+                        .preview-diagram-container {
+                            margin: 32px 0 24px;
+                            position: relative;
+                            height: 180px;
+                            background: rgba(0, 0, 0, 0.2);
+                            border: 1px solid rgba(var(--matrix-green-rgb), 0.2);
+                            overflow: hidden;
+                        }
+                        
+                        /* Basic styles to make nodes visible in preview */
+                        .preview-diagram-container .diagram-node {
+                            position: absolute;
+                            width: 120px;
+                            height: 60px;
+                            background: rgba(0, 0, 0, 0.7);
+                            border: 1px solid var(--matrix-green);
+                            box-shadow: 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
+                        }
+                        
+                        .preview-diagram-container .node-content {
+                            height: 100%;
+                            width: 100%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: var(--matrix-green);
+                            font-family: monospace;
+                            font-size: 12px;
+                            text-align: center;
+                        }
+                        
+               
+                        
+                        .preview-diagram-container .connections-container {
+                            position: absolute;
+                            top: 0;
+                            left: 100px;
+                            width: 100%;
+                            height: 100%;
+                        }
+                        
+                        .preview-diagram-container .diagram-connection {
+                            stroke: var(--matrix-green);
+                            stroke-width: 2;
+                            stroke-dasharray: 5;
+                        }
+                        
+                        /* Position the nodes */
+                        .diagram-node.node1 {
+                            left: 45px;
+                            top: 40px;
+                        }
+                        
+                        .diagram-node.node2 {
+                            right: 45px;
+                            top: 100px;
+                        }
+                    </style>
+                    <div class="preview-diagram-container">
+                        <svg class="connections-container">
+                            <line class="diagram-connection" x1="90" y1="70" x2="220" y2="130" />
+                        </svg>
+                        <div class="diagram-node node1">
+                            <div class="node-content">TASK</div>
+                        </div>
+                        <div class="diagram-node node2">
+                            <div class="node-content">NOTE</div>
+                        </div>
+                    </div>
+                `
+            },
             'backlog-group-update': {
                 id: 'backlog-group-update',
                 title: 'BACKLOG GROUP',
