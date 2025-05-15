@@ -3,7 +3,12 @@ class DiagramManager {
         this.nodes = JSON.parse(localStorage.getItem('matrix-diagram-nodes')) || [];
         this.connections = JSON.parse(localStorage.getItem('matrix-diagram-connections')) || [];
         this.diagramOverlay = document.querySelector('.diagram-overlay');
-        this.nextNodeId = 1;
+        
+        // Calculate the next node ID based on existing nodes
+        this.nextNodeId = this.calculateNextNodeId();
+        
+        // Clean up connections to remove duplicates and invalid references
+        this.cleanupConnections();
         
         // Keep track of drag state
         this.dragState = {
@@ -30,11 +35,85 @@ class DiagramManager {
     }
     
     /**
+     * Calculate the next node ID based on existing nodes
+     * @returns {number} The next available node ID
+     */
+    calculateNextNodeId() {
+        if (this.nodes.length === 0) return 1;
+        
+        // Extract numeric IDs from node IDs (e.g., "node-5" -> 5)
+        const nodeIds = this.nodes.map(node => {
+            const match = node.id.match(/^node-(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+        });
+        
+        // Find the highest ID and add 1
+        return Math.max(...nodeIds) + 1;
+    }
+    
+    /**
+     * Clean up connections to remove duplicates and invalid references
+     */
+    cleanupConnections() {
+        if (!this.connections.length) return;
+        
+        // Get a list of valid node IDs
+        const validNodeIds = this.nodes.map(node => node.id);
+        
+        // First, filter out connections with invalid node references
+        this.connections = this.connections.filter(conn => 
+            validNodeIds.includes(conn.source) && 
+            validNodeIds.includes(conn.target)
+        );
+        
+        // Then, remove duplicate connections (same source and target)
+        const uniqueConnections = [];
+        const connectionMap = new Map();
+        
+        this.connections.forEach(conn => {
+            // Create a unique key for this connection based on source and target
+            const key = `${conn.source}-${conn.target}`;
+            
+            // Only keep the first occurrence of each unique connection
+            if (!connectionMap.has(key)) {
+                connectionMap.set(key, true);
+                uniqueConnections.push(conn);
+            }
+        });
+        
+        this.connections = uniqueConnections;
+        
+        // Save cleaned-up connections to localStorage
+        this.saveState();
+    }
+    
+    /**
      * Save state to localStorage
      */
     saveState() {
         localStorage.setItem('matrix-diagram-nodes', JSON.stringify(this.nodes));
         localStorage.setItem('matrix-diagram-connections', JSON.stringify(this.connections));
+    }
+    
+    /**
+     * Create or get SVG container for connections
+     * @returns {SVGElement} The SVG container element
+     */
+    getConnectionsContainer() {
+        let connectionsContainer = this.diagramOverlay.querySelector('.connections-container');
+        if (!connectionsContainer) {
+            connectionsContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            connectionsContainer.classList.add('connections-container');
+            connectionsContainer.style.position = 'absolute';
+            connectionsContainer.style.top = '0';
+            connectionsContainer.style.left = '0';
+            connectionsContainer.style.width = '100%';
+            connectionsContainer.style.height = '100%';
+            connectionsContainer.style.pointerEvents = 'none';
+            connectionsContainer.style.zIndex = '1';
+            this.diagramOverlay.appendChild(connectionsContainer);
+        }
+        return connectionsContainer;
     }
     
     /**
@@ -47,12 +126,16 @@ class DiagramManager {
         // Event listeners for connection line
         this.diagramOverlay.addEventListener('mousemove', this.handleConnectionDragMove.bind(this));
         document.addEventListener('mouseup', this.handleConnectionDragEnd.bind(this));
+        
+        // Global event listeners for node dragging
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     }
     
     /**
      * Create a new node at specified position
      */
-    createNode(x, y, sourceNodeId = null) {
+    createNode(x, y) {
         // Calculate position relative to the container
         const rect = this.diagramOverlay.getBoundingClientRect();
         const relX = x - rect.left;
@@ -68,18 +151,10 @@ class DiagramManager {
         };
         
         this.nodes.push(node);
-        
-        // If source node is provided, create a connection
-        if (sourceNodeId) {
-            this.connections.push({
-                id: `conn-${Date.now()}`,
-                source: sourceNodeId,
-                target: node.id
-            });
-        }
-        
         this.saveState();
-        this.renderDiagram();
+        
+        // Create just this node in the DOM instead of re-rendering everything
+        this.renderSingleNode(node);
         
         // Focus the text content of the new node for editing
         setTimeout(() => {
@@ -96,23 +171,147 @@ class DiagramManager {
     }
     
     /**
+     * Render a single node without re-rendering the entire diagram
+     */
+    renderSingleNode(node) {
+        if (!this.diagramOverlay) return;
+        
+        // Get SVG container for connections
+        this.getConnectionsContainer();
+        
+        // Create the node element
+        const nodeEl = document.createElement('div');
+        nodeEl.id = node.id;
+        nodeEl.className = 'diagram-node';
+        
+        // Set explicit position style
+        nodeEl.style.position = 'absolute';
+        nodeEl.style.left = `${node.position.x}px`;
+        nodeEl.style.top = `${node.position.y}px`;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-node-btn';
+        deleteBtn.textContent = '×';
+        deleteBtn.style.zIndex = '15';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent event bubbling
+            this.deleteNode(node.id);
+        });
+        
+        const content = document.createElement('div');
+        content.className = 'node-content';
+        content.contentEditable = true;
+        content.textContent = node.content;
+        content.addEventListener('input', (e) => {
+            this.updateNodeContent(node.id, e.target.textContent);
+        });
+        
+        // Prevent default behavior for better editing
+        content.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                content.blur();
+            }
+        });
+        
+        nodeEl.appendChild(deleteBtn);
+        nodeEl.appendChild(content);
+        
+        // Add connection indicators
+        this.addConnectionIndicators(nodeEl);
+        
+        this.diagramOverlay.appendChild(nodeEl);
+        
+        // Initialize dragging
+        this.initializeNodeDragging(nodeEl);
+    }
+    
+    /**
      * Create a connection between two nodes
      */
     createConnection(sourceId, targetId) {
-        // Check if connection already exists
+        // Skip if trying to connect to the same node
+        if (sourceId === targetId) return;
+        
+        // Check if connection already exists (either direction)
         const connectionExists = this.connections.some(
-            conn => conn.source === sourceId && conn.target === targetId
+            conn => (conn.source === sourceId && conn.target === targetId) || 
+                   (conn.source === targetId && conn.target === sourceId)
         );
         
-        if (!connectionExists && sourceId !== targetId) {
-            this.connections.push({
+        if (!connectionExists) {
+            const connection = {
                 id: `conn-${Date.now()}`,
                 source: sourceId,
                 target: targetId
-            });
+            };
             
+            this.connections.push(connection);
             this.saveState();
-            this.renderDiagram();
+            
+            // Render just this connection instead of re-rendering everything
+            this.renderSingleConnection(connection);
+        }
+    }
+    
+    /**
+     * Render a single connection without re-rendering the entire diagram
+     */
+    renderSingleConnection(conn) {
+        if (!this.diagramOverlay) return;
+        
+        // Get SVG container
+        const connectionsContainer = this.getConnectionsContainer();
+        
+        // Create the connection line element
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('id', conn.id);
+        line.classList.add('diagram-connection');
+        
+        // Add delete button for the connection
+        const deleteBtn = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        deleteBtn.textContent = '×';
+        deleteBtn.classList.add('delete-connection-btn');
+        deleteBtn.setAttribute('data-connection-id', conn.id);
+        
+        connectionsContainer.appendChild(line);
+        connectionsContainer.appendChild(deleteBtn);
+        
+        // Draw the connection line
+        this.drawConnectionLine(conn.id, conn.source, conn.target);
+        
+        // Position delete button
+        this.positionConnectionDeleteButton(conn.id);
+        
+        // Add click event for delete button
+        deleteBtn.addEventListener('click', (e) => {
+            const connectionId = e.target.getAttribute('data-connection-id');
+            this.deleteConnection(connectionId);
+        });
+        
+        // Update connection indicators
+        this.updateConnectionIndicators();
+    }
+    
+    /**
+     * Position delete button for a connection
+     */
+    positionConnectionDeleteButton(connectionId) {
+        const connectionLine = document.getElementById(connectionId);
+        const deleteBtn = document.querySelector(`[data-connection-id="${connectionId}"]`);
+        
+        if (connectionLine && deleteBtn) {
+            const x1 = parseFloat(connectionLine.getAttribute('x1'));
+            const y1 = parseFloat(connectionLine.getAttribute('y1'));
+            const x2 = parseFloat(connectionLine.getAttribute('x2'));
+            const y2 = parseFloat(connectionLine.getAttribute('y2'));
+            
+            // Position delete button at midpoint
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            
+            deleteBtn.setAttribute('x', midX);
+            deleteBtn.setAttribute('y', midY);
         }
     }
     
@@ -137,6 +336,15 @@ class DiagramManager {
         if (node) {
             node.content = content;
             this.saveState();
+            
+            // Update the DOM element directly to avoid full re-render
+            const nodeElement = document.getElementById(nodeId);
+            if (nodeElement) {
+                const contentElement = nodeElement.querySelector('.node-content');
+                if (contentElement && contentElement.textContent !== content) {
+                    contentElement.textContent = content;
+                }
+            }
         }
     }
     
@@ -178,7 +386,7 @@ class DiagramManager {
         this.diagramOverlay.classList.add('connection-dragging');
         
         // Immediately update to calculate proper source point
-        this.updateTemporaryConnectionLine(x, y, x, y);
+        this.updateTemporaryConnectionLine();
     }
     
     /**
@@ -194,12 +402,7 @@ class DiagramManager {
         this.connectionDrag.currentY = e.clientY - rect.top;
         
         // Update temporary connection line
-        this.updateTemporaryConnectionLine(
-            this.connectionDrag.startX,
-            this.connectionDrag.startY,
-            this.connectionDrag.currentX,
-            this.connectionDrag.currentY
-        );
+        this.updateTemporaryConnectionLine();
     }
     
     /**
@@ -222,13 +425,6 @@ class DiagramManager {
             if (targetId !== this.connectionDrag.sourceNode) {
                 this.createConnection(this.connectionDrag.sourceNode, targetId);
             }
-        } else {
-            // Create a new node with connection
-            const rect = this.diagramOverlay.getBoundingClientRect();
-            const x = e.clientX;
-            const y = e.clientY;
-            
-            this.createNode(x, y, this.connectionDrag.sourceNode);
         }
         
         this.connectionDrag.isActive = false;
@@ -239,19 +435,7 @@ class DiagramManager {
      * Create temporary connection line during dragging
      */
     createTemporaryConnectionLine(x1, y1, x2, y2) {
-        let svg = this.diagramOverlay.querySelector('.connections-container');
-        if (!svg) {
-            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.classList.add('connections-container');
-            svg.style.position = 'absolute';
-            svg.style.top = '0';
-            svg.style.left = '0';
-            svg.style.width = '100%';
-            svg.style.height = '100%';
-            svg.style.pointerEvents = 'none';
-            svg.style.zIndex = '1';
-            this.diagramOverlay.appendChild(svg);
-        }
+        const svg = this.getConnectionsContainer();
         
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('id', 'temp-connection');
@@ -265,107 +449,126 @@ class DiagramManager {
     }
     
     /**
+     * Calculate intersection point between a line from node center to a point,
+     * and the node's edge
+     */
+    calculateNodeIntersection(nodeElement, pointX, pointY) {
+        const diagramRect = this.diagramOverlay.getBoundingClientRect();
+        const nodeRect = nodeElement.getBoundingClientRect();
+        
+        // Calculate node center
+        const centerX = nodeRect.left + nodeRect.width / 2 - diagramRect.left;
+        const centerY = nodeRect.top + nodeRect.height / 2 - diagramRect.top;
+        
+        // Calculate angle between center and point
+        const angle = Math.atan2(pointY - centerY, pointX - centerX);
+        
+        // Calculate node half dimensions
+        const halfWidth = nodeRect.width / 2;
+        const halfHeight = nodeRect.height / 2;
+        
+        // Determine intersection point
+        let intersectX, intersectY, side;
+        
+        // Find border point based on angle
+        if (Math.abs(Math.cos(angle)) * halfHeight > Math.abs(Math.sin(angle)) * halfWidth) {
+            // Intersects with left or right edge
+            intersectX = centerX + Math.sign(Math.cos(angle)) * halfWidth;
+            intersectY = centerY + Math.tan(angle) * Math.sign(Math.cos(angle)) * halfWidth;
+            side = Math.cos(angle) > 0 ? 'right' : 'left';
+        } else {
+            // Intersects with top or bottom edge
+            intersectX = centerX + Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * halfHeight;
+            intersectY = centerY + Math.sign(Math.sin(angle)) * halfHeight;
+            side = Math.sin(angle) > 0 ? 'bottom' : 'top';
+        }
+        
+        return { x: intersectX, y: intersectY, side, nodeRect, diagramRect, centerX, centerY };
+    }
+    
+    /**
      * Update temporary connection line during dragging
      */
-    updateTemporaryConnectionLine(x1, y1, x2, y2) {
+    updateTemporaryConnectionLine() {
         const line = document.getElementById('temp-connection');
-        if (line) {
-            // Check if there's a source node to adjust starting point
-            const sourceNode = document.getElementById(this.connectionDrag.sourceNode);
-            if (sourceNode) {
-                const diagramRect = this.diagramOverlay.getBoundingClientRect();
-                const sourceRect = sourceNode.getBoundingClientRect();
-                
-                // Calculate source node center
-                const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
-                const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
-                
-                // Calculate angle between source center and cursor
-                const angle = Math.atan2(y2 - sourceCenterY, x2 - sourceCenterX);
-                
-                // Calculate source node border intersection
-                const sourceNodeHalfWidth = sourceRect.width / 2;
-                const sourceNodeHalfHeight = sourceRect.height / 2;
-                
-                // Determine source intersection point
-                let sourceX, sourceY;
-                
-                // Find border point based on angle
-                if (Math.abs(Math.cos(angle)) * sourceNodeHalfHeight > Math.abs(Math.sin(angle)) * sourceNodeHalfWidth) {
-                    // Intersects with left or right edge
-                    sourceX = sourceCenterX + Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
-                    sourceY = sourceCenterY + Math.tan(angle) * Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
-                } else {
-                    // Intersects with top or bottom edge
-                    sourceX = sourceCenterX + Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
-                    sourceY = sourceCenterY + Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
-                }
-                
-                // Set adjusted line attributes
-                line.setAttribute('x1', sourceX);
-                line.setAttribute('y1', sourceY);
-                line.setAttribute('x2', x2);
-                line.setAttribute('y2', y2);
-                
-                // Determine which side of source node is connected
-                let sourceSide;
-                
-                const sourceDistanceToRight = Math.abs(sourceX - (sourceCenterX + sourceRect.width / 2));
-                const sourceDistanceToLeft = Math.abs(sourceX - (sourceCenterX - sourceRect.width / 2));
-                const sourceDistanceToTop = Math.abs(sourceY - (sourceCenterY - sourceRect.height / 2));
-                const sourceDistanceToBottom = Math.abs(sourceY - (sourceCenterY + sourceRect.height / 2));
-                
-                const sourceMinDistance = Math.min(
-                    sourceDistanceToRight, 
-                    sourceDistanceToLeft,
-                    sourceDistanceToTop,
-                    sourceDistanceToBottom
-                );
-                
-                if (sourceMinDistance === sourceDistanceToRight) sourceSide = 'right';
-                else if (sourceMinDistance === sourceDistanceToLeft) sourceSide = 'left';
-                else if (sourceMinDistance === sourceDistanceToTop) sourceSide = 'top';
-                else sourceSide = 'bottom';
-                
-                // Reset all indicators on this node first
-                const indicators = sourceNode.querySelectorAll('.connection-indicator');
-                indicators.forEach(indicator => {
-                    indicator.classList.remove('active');
-                    indicator.style.opacity = '0';
-                });
-                
-                // Clear all temporary connection points
-                const tempPoints = sourceNode.querySelectorAll('.temp-connection-point');
-                tempPoints.forEach(point => point.remove());
-                
-                // Calculate position for the indicator
-                const position = sourceSide === 'right' || sourceSide === 'left'
-                    ? (sourceY - (sourceRect.top - diagramRect.top)) / sourceRect.height
-                    : (sourceX - (sourceRect.left - diagramRect.left)) / sourceRect.width;
-                
-                // Create a temporary connection point
-                const point = document.createElement('div');
-                point.className = `temp-connection-point connection-point connection-indicator ${sourceSide}-indicator active`;
-                point.setAttribute('data-side', sourceSide);
-                point.style.setProperty('--connection-pos', `${position * 100}%`);
-                point.style.opacity = '1';
-                
-                // Add to the node
-                sourceNode.appendChild(point);
-            } else {
-                // If no source node (shouldn't happen normally), use original coordinates
-                line.setAttribute('x1', x1);
-                line.setAttribute('y1', y1);
-                line.setAttribute('x2', x2);
-                line.setAttribute('y2', y2);
-            }
-        }
+        if (!line) return;
+        
+        // Check if there's a source node to adjust starting point
+        const sourceNode = document.getElementById(this.connectionDrag.sourceNode);
+        if (!sourceNode) return;
+        
+        // Get current mouse position
+        const x2 = this.connectionDrag.currentX;
+        const y2 = this.connectionDrag.currentY;
+        
+        // Calculate source node intersection
+        const intersection = this.calculateNodeIntersection(sourceNode, x2, y2);
+        
+        // Set adjusted line attributes
+        line.setAttribute('x1', intersection.x);
+        line.setAttribute('y1', intersection.y);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        
+        // Reset all indicators on this node first
+        const indicators = sourceNode.querySelectorAll('.connection-indicator');
+        indicators.forEach(indicator => {
+            indicator.classList.remove('active');
+            indicator.style.opacity = '0';
+        });
+        
+        // Clear all temporary connection points
+        const tempPoints = sourceNode.querySelectorAll('.temp-connection-point');
+        tempPoints.forEach(point => point.remove());
+        
+        // Calculate position for the indicator (relative position along the edge)
+        const position = intersection.side === 'right' || intersection.side === 'left'
+            ? (intersection.y - (intersection.nodeRect.top - intersection.diagramRect.top)) / intersection.nodeRect.height
+            : (intersection.x - (intersection.nodeRect.left - intersection.diagramRect.left)) / intersection.nodeRect.width;
+        
+        // Create a temporary connection point
+        const point = document.createElement('div');
+        point.className = `temp-connection-point connection-point connection-indicator ${intersection.side}-indicator active`;
+        point.setAttribute('data-side', intersection.side);
+        point.style.setProperty('--connection-pos', `${position * 100}%`);
+        point.style.opacity = '1';
+        
+        // Add to the node
+        sourceNode.appendChild(point);
     }
     
     /**
      * Initialize dragging for a node
      */
     initializeNodeDragging(nodeElement) {
+        // Clear any existing event listeners (to avoid duplicates)
+        const clone = nodeElement.cloneNode(true);
+        nodeElement.parentNode.replaceChild(clone, nodeElement);
+        nodeElement = clone;
+        
+        // Re-attach important event listeners to child elements
+        const deleteBtn = nodeElement.querySelector('.delete-node-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                this.deleteNode(nodeElement.id);
+            });
+        }
+        
+        const content = nodeElement.querySelector('.node-content');
+        if (content) {
+            content.addEventListener('input', (e) => {
+                this.updateNodeContent(nodeElement.id, e.target.textContent);
+            });
+            
+            content.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    content.blur();
+                }
+            });
+        }
+        
         nodeElement.addEventListener('mousedown', (e) => {
             // Skip if clicking on content (for editing), delete button, or connection handle
             if (e.target.classList.contains('node-content') || 
@@ -416,10 +619,6 @@ class DiagramManager {
             
             this.startConnectionDrag(nodeId, startX, startY);
         });
-        
-        // These listeners are attached to document to catch events outside the node
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     }
     
     /**
@@ -434,8 +633,14 @@ class DiagramManager {
         const x = e.clientX - rect.left - this.dragState.initialX;
         const y = e.clientY - rect.top - this.dragState.initialY;
         
-        // Constrain to diagram area
+        // Ensure the node element still exists
         const nodeEl = document.getElementById(this.dragState.currentNode);
+        if (!nodeEl) {
+            this.dragState.isDragging = false;
+            return;
+        }
+        
+        // Constrain to diagram area
         const nodeWidth = nodeEl.offsetWidth;
         const nodeHeight = nodeEl.offsetHeight;
         
@@ -445,7 +650,9 @@ class DiagramManager {
         this.dragState.xOffset = constrainedX;
         this.dragState.yOffset = constrainedY;
         
-        nodeEl.style.transform = `translate(${constrainedX}px, ${constrainedY}px)`;
+        // Use absolute positioning instead of transform
+        nodeEl.style.left = `${constrainedX}px`;
+        nodeEl.style.top = `${constrainedY}px`;
         
         // Update connection lines during drag
         this.updateConnectionsPosition();
@@ -494,57 +701,27 @@ class DiagramManager {
         
         if (!sourceNode || !targetNode || !connectionLine) return;
         
-        const sourceRect = sourceNode.getBoundingClientRect();
+        // Calculate target center for source node intersection
         const targetRect = targetNode.getBoundingClientRect();
         const diagramRect = this.diagramOverlay.getBoundingClientRect();
-        
-        // Calculate center points
-        const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
-        const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
         const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
         const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
         
-        // Calculate angle between centers
-        const angle = Math.atan2(targetCenterY - sourceCenterY, targetCenterX - sourceCenterX);
+        // Calculate source intersection point
+        const sourceIntersection = this.calculateNodeIntersection(
+            sourceNode, targetCenterX, targetCenterY
+        );
         
-        // Calculate source node border intersection
-        const sourceNodeHalfWidth = sourceRect.width / 2;
-        const sourceNodeHalfHeight = sourceRect.height / 2;
-        
-        // Calculate target node border intersection
-        const targetNodeHalfWidth = targetRect.width / 2;
-        const targetNodeHalfHeight = targetRect.height / 2;
-        
-        // Determine intersection points
-        let sourceX, sourceY, targetX, targetY;
-        
-        // Source intersection - find border point based on angle
-        if (Math.abs(Math.cos(angle)) * sourceNodeHalfHeight > Math.abs(Math.sin(angle)) * sourceNodeHalfWidth) {
-            // Intersects with left or right edge
-            sourceX = sourceCenterX + Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
-            sourceY = sourceCenterY + Math.tan(angle) * Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
-        } else {
-            // Intersects with top or bottom edge
-            sourceX = sourceCenterX + Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
-            sourceY = sourceCenterY + Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
-        }
-        
-        // Target intersection - find border point based on reverse angle
-        if (Math.abs(Math.cos(angle)) * targetNodeHalfHeight > Math.abs(Math.sin(angle)) * targetNodeHalfWidth) {
-            // Intersects with left or right edge
-            targetX = targetCenterX - Math.sign(Math.cos(angle)) * targetNodeHalfWidth;
-            targetY = targetCenterY - Math.tan(angle) * Math.sign(Math.cos(angle)) * targetNodeHalfWidth;
-        } else {
-            // Intersects with top or bottom edge
-            targetX = targetCenterX - Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * targetNodeHalfHeight;
-            targetY = targetCenterY - Math.sign(Math.sin(angle)) * targetNodeHalfHeight;
-        }
+        // Calculate target intersection point (using source center)
+        const targetIntersection = this.calculateNodeIntersection(
+            targetNode, sourceIntersection.centerX, sourceIntersection.centerY
+        );
         
         // Set line attributes
-        connectionLine.setAttribute('x1', sourceX);
-        connectionLine.setAttribute('y1', sourceY);
-        connectionLine.setAttribute('x2', targetX);
-        connectionLine.setAttribute('y2', targetY);
+        connectionLine.setAttribute('x1', sourceIntersection.x);
+        connectionLine.setAttribute('y1', sourceIntersection.y);
+        connectionLine.setAttribute('x2', targetIntersection.x);
+        connectionLine.setAttribute('y2', targetIntersection.y);
     }
     
     /**
@@ -554,124 +731,36 @@ class DiagramManager {
         // Only render if overlay exists
         if (!this.diagramOverlay) return;
         
-        // Create SVG container for connections if it doesn't exist
-        let connectionsContainer = this.diagramOverlay.querySelector('.connections-container');
-        if (!connectionsContainer) {
-            connectionsContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            connectionsContainer.classList.add('connections-container');
-            connectionsContainer.style.position = 'absolute';
-            connectionsContainer.style.top = '0';
-            connectionsContainer.style.left = '0';
-            connectionsContainer.style.width = '100%';
-            connectionsContainer.style.height = '100%';
-            connectionsContainer.style.pointerEvents = 'none';
-            connectionsContainer.style.zIndex = '1';
-            this.diagramOverlay.appendChild(connectionsContainer);
-        } else {
-            // Clear existing connections
-            connectionsContainer.innerHTML = '';
-        }
+        // Get or create SVG container for connections
+        const connectionsContainer = this.getConnectionsContainer();
+        
+        // Clear existing connections
+        connectionsContainer.innerHTML = '';
         
         // Clear existing nodes
         const existingNodes = this.diagramOverlay.querySelectorAll('.diagram-node');
         existingNodes.forEach(node => {
             if (node !== connectionsContainer) {
-                this.diagramOverlay.removeChild(node);
+                node.remove();
             }
         });
         
-        // Render connections
-        this.connections.forEach(conn => {
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('id', conn.id);
-            line.classList.add('diagram-connection');
-            
-            // Add delete button for the connection
-            const deleteBtn = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            deleteBtn.textContent = '×';
-            deleteBtn.classList.add('delete-connection-btn');
-            deleteBtn.setAttribute('data-connection-id', conn.id);
-            
-            // Position will be set when nodes are rendered
-            connectionsContainer.appendChild(line);
-            connectionsContainer.appendChild(deleteBtn);
-            
-            // Add click event for delete button
-            deleteBtn.addEventListener('click', (e) => {
-                const connectionId = e.target.getAttribute('data-connection-id');
-                this.deleteConnection(connectionId);
-            });
-        });
+        // Create a Map of node IDs to track rendered nodes
+        const nodeElements = new Map();
         
-        // Render nodes
+        // Render nodes first
         this.nodes.forEach(node => {
-            const nodeEl = document.createElement('div');
-            nodeEl.id = node.id;
-            nodeEl.className = 'diagram-node';
-            nodeEl.style.transform = `translate(${node.position.x}px, ${node.position.y}px)`;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-node-btn';
-            deleteBtn.textContent = '×';
-            deleteBtn.style.zIndex = '15';
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent event bubbling
-                this.deleteNode(node.id);
-            });
-            
-            const content = document.createElement('div');
-            content.className = 'node-content';
-            content.contentEditable = true;
-            content.textContent = node.content;
-            content.addEventListener('input', (e) => {
-                this.updateNodeContent(node.id, e.target.textContent);
-            });
-            
-            // Prevent default behavior for better editing
-            content.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    content.blur();
-                }
-            });
-            
-            nodeEl.appendChild(deleteBtn);
-            nodeEl.appendChild(content);
-            
-            // Add connection indicators
-            this.addConnectionIndicators(nodeEl);
-            
-            this.diagramOverlay.appendChild(nodeEl);
-            
-            // Initialize dragging
-            this.initializeNodeDragging(nodeEl);
+            this.renderSingleNode(node);
+            nodeElements.set(node.id, document.getElementById(node.id));
         });
         
-        // Update connection positions
+        // Render connections between nodes
         this.connections.forEach(conn => {
-            this.drawConnectionLine(conn.id, conn.source, conn.target);
-            
-            // Position delete button
-            const connectionLine = document.getElementById(conn.id);
-            const deleteBtn = document.querySelector(`[data-connection-id="${conn.id}"]`);
-            
-            if (connectionLine && deleteBtn) {
-                const x1 = parseFloat(connectionLine.getAttribute('x1'));
-                const y1 = parseFloat(connectionLine.getAttribute('y1'));
-                const x2 = parseFloat(connectionLine.getAttribute('x2'));
-                const y2 = parseFloat(connectionLine.getAttribute('y2'));
-                
-                // Position delete button at midpoint
-                const midX = (x1 + x2) / 2;
-                const midY = (y1 + y2) / 2;
-                
-                deleteBtn.setAttribute('x', midX);
-                deleteBtn.setAttribute('y', midY);
+            // Verify both nodes exist
+            if (nodeElements.has(conn.source) && nodeElements.has(conn.target)) {
+                this.renderSingleConnection(conn);
             }
         });
-        
-        // Update connection indicators after connections are drawn
-        this.updateConnectionIndicators();
     }
     
     /**
@@ -695,6 +784,58 @@ class DiagramManager {
             indicator.setAttribute('data-side', side);
             nodeElement.appendChild(indicator);
         });
+    }
+    
+    /**
+     * Determine which side of a node a connection point is on
+     */
+    determineConnectionSide(x, y, nodeInfo) {
+        const { centerX, centerY, nodeRect, diagramRect } = nodeInfo;
+        
+        // Determine side by checking distance to each edge
+        const distanceToRight = Math.abs(x - (centerX + nodeRect.width / 2));
+        const distanceToLeft = Math.abs(x - (centerX - nodeRect.width / 2));
+        const distanceToTop = Math.abs(y - (centerY - nodeRect.height / 2));
+        const distanceToBottom = Math.abs(y - (centerY + nodeRect.height / 2));
+        
+        const minDistance = Math.min(
+            distanceToRight, 
+            distanceToLeft,
+            distanceToTop,
+            distanceToBottom
+        );
+        
+        if (minDistance === distanceToRight) return 'right';
+        if (minDistance === distanceToLeft) return 'left';
+        if (minDistance === distanceToTop) return 'top';
+        return 'bottom';
+    }
+    
+    /**
+     * Calculate relative position of a connection point along a node edge
+     */
+    calculateConnectionPosition(x, y, side, nodeRect, diagramRect) {
+        // Calculate position (0-1) along the edge
+        return side === 'right' || side === 'left'
+            ? (y - (nodeRect.top - diagramRect.top)) / nodeRect.height
+            : (x - (nodeRect.left - diagramRect.left)) / nodeRect.width;
+    }
+    
+    /**
+     * Create a connection point element for a node
+     */
+    createConnectionPoint(nodeElement, side, position) {
+        // Create a connection point
+        const point = document.createElement('div');
+        point.className = `connection-point connection-indicator ${side}-indicator active`;
+        point.setAttribute('data-side', side);
+        point.style.setProperty('--connection-pos', `${position * 100}%`);
+        point.style.opacity = '1';
+        
+        // Add to the node
+        nodeElement.appendChild(point);
+        
+        return point;
     }
     
     /**
@@ -729,64 +870,31 @@ class DiagramManager {
             const x2 = parseFloat(connectionLine.getAttribute('x2'));
             const y2 = parseFloat(connectionLine.getAttribute('y2'));
             
-            // Determine which side of source node is connected
-            const sourceRect = sourceNode.getBoundingClientRect();
+            // Get node rectangles
             const diagramRect = this.diagramOverlay.getBoundingClientRect();
+            const sourceRect = sourceNode.getBoundingClientRect();
+            const targetRect = targetNode.getBoundingClientRect();
+            
+            // Calculate node centers
             const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
             const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
-            
-            // Determine which side of target node is connected
-            const targetRect = targetNode.getBoundingClientRect();
             const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
             const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
             
             // Calculate connection sides
-            let sourceSide, targetSide;
+            const sourceNodeInfo = { centerX: sourceCenterX, centerY: sourceCenterY, nodeRect: sourceRect, diagramRect };
+            const targetNodeInfo = { centerX: targetCenterX, centerY: targetCenterY, nodeRect: targetRect, diagramRect };
             
-            // Determine source side
-            const sourceDistanceToRight = Math.abs(x1 - (sourceCenterX + sourceRect.width / 2));
-            const sourceDistanceToLeft = Math.abs(x1 - (sourceCenterX - sourceRect.width / 2));
-            const sourceDistanceToTop = Math.abs(y1 - (sourceCenterY - sourceRect.height / 2));
-            const sourceDistanceToBottom = Math.abs(y1 - (sourceCenterY + sourceRect.height / 2));
-            
-            const sourceMinDistance = Math.min(
-                sourceDistanceToRight, 
-                sourceDistanceToLeft,
-                sourceDistanceToTop,
-                sourceDistanceToBottom
-            );
-            
-            if (sourceMinDistance === sourceDistanceToRight) sourceSide = 'right';
-            else if (sourceMinDistance === sourceDistanceToLeft) sourceSide = 'left';
-            else if (sourceMinDistance === sourceDistanceToTop) sourceSide = 'top';
-            else sourceSide = 'bottom';
-            
-            // Determine target side
-            const targetDistanceToRight = Math.abs(x2 - (targetCenterX + targetRect.width / 2));
-            const targetDistanceToLeft = Math.abs(x2 - (targetCenterX - targetRect.width / 2));
-            const targetDistanceToTop = Math.abs(y2 - (targetCenterY - targetRect.height / 2));
-            const targetDistanceToBottom = Math.abs(y2 - (targetCenterY + targetRect.height / 2));
-            
-            const targetMinDistance = Math.min(
-                targetDistanceToRight, 
-                targetDistanceToLeft,
-                targetDistanceToTop,
-                targetDistanceToBottom
-            );
-            
-            if (targetMinDistance === targetDistanceToRight) targetSide = 'right';
-            else if (targetMinDistance === targetDistanceToLeft) targetSide = 'left';
-            else if (targetMinDistance === targetDistanceToTop) targetSide = 'top';
-            else targetSide = 'bottom';
+            const sourceSide = this.determineConnectionSide(x1, y1, sourceNodeInfo);
+            const targetSide = this.determineConnectionSide(x2, y2, targetNodeInfo);
             
             // Track connection points for source
             const sourceKey = `${conn.source}-${sourceSide}`;
             if (!nodeSideConnections.has(sourceKey)) {
                 nodeSideConnections.set(sourceKey, []);
             }
-            const sourcePosition = sourceSide === 'right' || sourceSide === 'left'
-                ? (y1 - (sourceRect.top - diagramRect.top)) / sourceRect.height
-                : (x1 - (sourceRect.left - diagramRect.left)) / sourceRect.width;
+            
+            const sourcePosition = this.calculateConnectionPosition(x1, y1, sourceSide, sourceRect, diagramRect);
             
             nodeSideConnections.get(sourceKey).push({
                 nodeId: conn.source,
@@ -801,9 +909,8 @@ class DiagramManager {
             if (!nodeSideConnections.has(targetKey)) {
                 nodeSideConnections.set(targetKey, []);
             }
-            const targetPosition = targetSide === 'right' || targetSide === 'left'
-                ? (y2 - (targetRect.top - diagramRect.top)) / targetRect.height
-                : (x2 - (targetRect.left - diagramRect.left)) / targetRect.width;
+            
+            const targetPosition = this.calculateConnectionPosition(x2, y2, targetSide, targetRect, diagramRect);
             
             nodeSideConnections.get(targetKey).push({
                 nodeId: conn.target,
@@ -820,15 +927,7 @@ class DiagramManager {
                 const node = document.getElementById(conn.nodeId);
                 if (!node) return;
                 
-                // Create a connection point
-                const point = document.createElement('div');
-                point.className = `connection-point connection-indicator ${conn.side}-indicator active`;
-                point.setAttribute('data-side', conn.side);
-                point.style.setProperty('--connection-pos', `${conn.position * 100}%`);
-                point.style.opacity = '1';
-                
-                // Add to the node
-                node.appendChild(point);
+                this.createConnectionPoint(node, conn.side, conn.position);
             });
         });
     }
