@@ -1288,7 +1288,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
+    right: 30px; /* Leave space for delete button */
     height: 24px; /* Height of drag area */
     cursor: move;
     z-index: 1;
@@ -1342,9 +1342,10 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     border: none;
     color: var(--matrix-green);
     font-size: 14px;
-    cursor: pointer;
+    cursor: pointer !important;
     opacity: 0.3;
     transition: opacity 0.3s ease;
+    z-index: 15;
 }
 
 .delete-node-btn:hover {
@@ -1353,51 +1354,120 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 .connection-handle {
     position: absolute;
-    right: -6px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
+    bottom: -8px; 
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    border: 1px solid rgba(var(--matrix-green-rgb), 0.2);
-    background: black;
-    cursor: pointer;
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.4);
+    background: rgba(0, 0, 0, 0.8);
+    cursor: grab;
     opacity: 0;
     transition: all 0.3s ease;
     z-index: 14;
-    box-shadow: 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    box-shadow: 
+        0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+}
+
+/* Replace plus sign with dots to indicate draggable connection point */
+.connection-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--matrix-green);
+    box-shadow: 0 0 3px rgba(var(--matrix-green-rgb), 0.4);
 }
 
 /* Show handle on hover */
 .diagram-node:hover .connection-handle {
-    opacity: 0.6;
-    transform: translateY(-50%) scale(1);
-    animation: subtleHandlePulse 3s infinite;
+    opacity: 0.75;
+    transform: translateX(-50%) scale(1);
+    animation: handlePulse 3s infinite;
 }
 
+/* Create subtle movement on hover to suggest draggability */
 .connection-handle:hover {
+    opacity: 0.9;
+    border: 1px solid var(--matrix-green);
+    background: rgba(var(--matrix-green-rgb), 0.06);
+    box-shadow: 
+        0 0 5px rgba(var(--matrix-green-rgb), 0.5),
+        inset 0 0 3px rgba(var(--matrix-green-rgb), 0.3);
+    transform: translateX(-50%) scale(1.1) translateY(-1px);
+}
+
+/* Add tooltip with instruction - more subtle version */
+.connection-handle::after {
+    content: "Drag to connect";
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    font-size: 9px;
+    white-space: nowrap;
+    color: rgba(var(--matrix-green-rgb), 0.8);
+    opacity: 0;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 2px 5px;
+    border-radius: 2px;
+    z-index: 20;
+}
+
+.connection-handle:hover::after {
     opacity: 0.8;
-    border: 1px solid rgba(var(--matrix-green-rgb), 0.4);
-    box-shadow: 0 0 6px rgba(var(--matrix-green-rgb), 0.4);
-    transform: translateY(-50%) scale(1.1);
+    transform: translateX(-50%) scale(1);
+    bottom: -22px;
 }
 
-/* More subtle connection lines */
+/* Connection handle pulse animation - more subtle */
+@keyframes handlePulse {
+    0% {
+        box-shadow: 
+            0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+            inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+    }
+    50% {
+        box-shadow: 
+            0 0 5px rgba(var(--matrix-green-rgb), 0.4),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.3);
+    }
+    100% {
+        box-shadow: 
+            0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+            inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+    }
+}
+
+/* More visible connection lines for all connections */
 .diagram-connection {
-    stroke: rgba(var(--matrix-green-rgb), 0.3);
-    stroke-width: 1px;
+    stroke: var(--matrix-green);
+    stroke-width: 1.5px;
     stroke-dasharray: 5, 8;
-    animation: connectionFlow 40s linear infinite;
-    opacity: 0.4;
-    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 0.1));
+    animation: connectionFlow 240s linear infinite;
+    opacity: 0.6;
+    filter: drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.3));
 }
 
-/* Style for temporary connection line while dragging */
+/* Style for temporary connection line while dragging - same as regular connections */
 .diagram-connection.temp-connection {
-    stroke-dasharray: 3, 5;
-    stroke-opacity: 0.5;
-    animation: tempConnectionFlow 3s linear infinite;
+    stroke: var(--matrix-green);
+    stroke-width: 1.5px;
+    stroke-dasharray: 5, 8;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 0.4));
 }
+
+
 
 .delete-connection-btn {
     fill: var(--matrix-green);
@@ -1502,15 +1572,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     }
 }
 
-/* Slower temporary connection flow */
-@keyframes tempConnectionFlow {
-    0% {
-        stroke-dashoffset: 0;
-    }
-    100% {
-        stroke-dashoffset: 40;
-    }
-}
+
 
 /* More subtle handle pulse animation */
 @keyframes subtleHandlePulse {
@@ -1557,34 +1619,46 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     opacity: 1;
 }
 
+/* Dynamic connection points for multiple connections per side */
+.connection-point {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15; /* Ensure it appears above the standard indicators */
+    /* Position will be set dynamically */
+}
+
 /* Right side indicator */
 .right-indicator {
     top: 0;
     right: 0;
-    width: 2px;
+    width: 1px; /* Even thinner for sharper appearance */
     height: 100%;
     background: linear-gradient(
         to bottom,
         rgba(var(--matrix-green-rgb), 0) 0%,
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
-        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
         rgba(var(--matrix-green-rgb), 0) 100%
     );
+    /* Sharper, stronger glow with more contrast */
+    /* filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6)); */
 }
 
 /* Left side indicator */
 .left-indicator {
     top: 0;
     left: 0;
-    width: 2px;
+    width: 1px; /* Even thinner for sharper appearance */
     height: 100%;
     background: linear-gradient(
         to bottom,
         rgba(var(--matrix-green-rgb), 0) 0%,
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
-        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
         rgba(var(--matrix-green-rgb), 0) 100%
     );
 }
@@ -1594,13 +1668,13 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     top: 0;
     left: 0;
     width: 100%;
-    height: 2px;
+    height: 1px; /* Even thinner for sharper appearance */
     background: linear-gradient(
         to right,
         rgba(var(--matrix-green-rgb), 0) 0%,
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
-        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
         rgba(var(--matrix-green-rgb), 0) 100%
     );
 }
@@ -1610,13 +1684,13 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 2px;
+    height: 1px; /* Even thinner for sharper appearance */
     background: linear-gradient(
         to right,
         rgba(var(--matrix-green-rgb), 0) 0%,
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
-        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
-        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
         rgba(var(--matrix-green-rgb), 0) 100%
     );
 }
@@ -1624,4 +1698,26 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 /* Active connection indicators should glow more */
 .connection-indicator.active {
     animation: indicatorPulse 3s infinite;
+}
+
+/* Refined animation for indicator pulse - sharper and more intense */
+@keyframes indicatorPulse {
+    0% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 1.0)) 
+               drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
+    }
+    100% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
 }

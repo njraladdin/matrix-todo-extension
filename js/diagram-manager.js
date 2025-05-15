@@ -334,23 +334,24 @@ class DiagramManager {
                     indicator.style.opacity = '0';
                 });
                 
-                // Activate the appropriate indicator
-                const sourceIndicator = sourceNode.querySelector(`.${sourceSide}-indicator`);
-                if (sourceIndicator) {
-                    sourceIndicator.classList.add('active');
-                    
-                    // Calculate position along the side to place the glow
-                    if (sourceSide === 'right' || sourceSide === 'left') {
-                        // Position vertically
-                        const relativeY = (sourceY - (sourceRect.top - diagramRect.top)) / sourceRect.height;
-                        sourceIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
-                    } else {
-                        // Position horizontally
-                        const relativeX = (sourceX - (sourceRect.left - diagramRect.left)) / sourceRect.width;
-                        sourceIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
-                    }
-                    sourceIndicator.style.opacity = '1';
-                }
+                // Clear all temporary connection points
+                const tempPoints = sourceNode.querySelectorAll('.temp-connection-point');
+                tempPoints.forEach(point => point.remove());
+                
+                // Calculate position for the indicator
+                const position = sourceSide === 'right' || sourceSide === 'left'
+                    ? (sourceY - (sourceRect.top - diagramRect.top)) / sourceRect.height
+                    : (sourceX - (sourceRect.left - diagramRect.left)) / sourceRect.width;
+                
+                // Create a temporary connection point
+                const point = document.createElement('div');
+                point.className = `temp-connection-point connection-point connection-indicator ${sourceSide}-indicator active`;
+                point.setAttribute('data-side', sourceSide);
+                point.style.setProperty('--connection-pos', `${position * 100}%`);
+                point.style.opacity = '1';
+                
+                // Add to the node
+                sourceNode.appendChild(point);
             } else {
                 // If no source node (shouldn't happen normally), use original coordinates
                 line.setAttribute('x1', x1);
@@ -369,6 +370,7 @@ class DiagramManager {
             // Skip if clicking on content (for editing), delete button, or connection handle
             if (e.target.classList.contains('node-content') || 
                 e.target.classList.contains('delete-node-btn') ||
+                e.target.closest('.delete-node-btn') ||  // Also check for child elements of delete button
                 e.target.classList.contains('connection-handle')) {
                 return;
             }
@@ -408,9 +410,9 @@ class DiagramManager {
             const nodeRect = nodeElement.getBoundingClientRect();
             
             // Calculate starting point at the edge of the node where the handle is
-            // Using the node's right center point for starting point
-            const startX = nodeRect.right - rect.left;
-            const startY = nodeRect.top + nodeRect.height / 2 - rect.top;
+            // Using the node's bottom center point for starting point
+            const startX = nodeRect.left + nodeRect.width / 2 - rect.left;
+            const startY = nodeRect.bottom - rect.top;
             
             this.startConnectionDrag(nodeId, startX, startY);
         });
@@ -611,7 +613,11 @@ class DiagramManager {
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-node-btn';
             deleteBtn.textContent = '×';
-            deleteBtn.addEventListener('click', () => this.deleteNode(node.id));
+            deleteBtn.style.zIndex = '15';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                this.deleteNode(node.id);
+            });
             
             const content = document.createElement('div');
             content.className = 'node-content';
@@ -677,6 +683,13 @@ class DiagramManager {
         const sides = ['top', 'right', 'bottom', 'left'];
         
         sides.forEach(side => {
+            // Create a container for indicators on this side
+            const indicatorContainer = document.createElement('div');
+            indicatorContainer.className = `connection-indicator-container ${side}-container`;
+            indicatorContainer.setAttribute('data-side', side);
+            nodeElement.appendChild(indicatorContainer);
+            
+            // Create base indicator
             const indicator = document.createElement('div');
             indicator.className = `connection-indicator ${side}-indicator`;
             indicator.setAttribute('data-side', side);
@@ -695,7 +708,14 @@ class DiagramManager {
             indicator.style.opacity = '0';
         });
         
-        // Process each connection to highlight appropriate indicators
+        // Clear all dynamic connection points
+        const pointContainers = document.querySelectorAll('.connection-point');
+        pointContainers.forEach(container => container.remove());
+        
+        // Track connections by node side to handle multiple connections per side
+        const nodeSideConnections = new Map();
+        
+        // Process each connection to collect connection points
         this.connections.forEach(conn => {
             const sourceNode = document.getElementById(conn.source);
             const targetNode = document.getElementById(conn.target);
@@ -759,40 +779,57 @@ class DiagramManager {
             else if (targetMinDistance === targetDistanceToTop) targetSide = 'top';
             else targetSide = 'bottom';
             
-            // Activate indicators
-            const sourceIndicator = sourceNode.querySelector(`.${sourceSide}-indicator`);
-            if (sourceIndicator) {
-                sourceIndicator.classList.add('active');
-                
-                // Calculate position along the side to place the glow
-                if (sourceSide === 'right' || sourceSide === 'left') {
-                    // Position vertically
-                    const relativeY = (y1 - (sourceRect.top - diagramRect.top)) / sourceRect.height;
-                    sourceIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
-                } else {
-                    // Position horizontally
-                    const relativeX = (x1 - (sourceRect.left - diagramRect.left)) / sourceRect.width;
-                    sourceIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
-                }
-                sourceIndicator.style.opacity = '1';
+            // Track connection points for source
+            const sourceKey = `${conn.source}-${sourceSide}`;
+            if (!nodeSideConnections.has(sourceKey)) {
+                nodeSideConnections.set(sourceKey, []);
             }
+            const sourcePosition = sourceSide === 'right' || sourceSide === 'left'
+                ? (y1 - (sourceRect.top - diagramRect.top)) / sourceRect.height
+                : (x1 - (sourceRect.left - diagramRect.left)) / sourceRect.width;
             
-            const targetIndicator = targetNode.querySelector(`.${targetSide}-indicator`);
-            if (targetIndicator) {
-                targetIndicator.classList.add('active');
-                
-                // Calculate position along the side to place the glow
-                if (targetSide === 'right' || targetSide === 'left') {
-                    // Position vertically
-                    const relativeY = (y2 - (targetRect.top - diagramRect.top)) / targetRect.height;
-                    targetIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
-                } else {
-                    // Position horizontally
-                    const relativeX = (x2 - (targetRect.left - diagramRect.left)) / targetRect.width;
-                    targetIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
-                }
-                targetIndicator.style.opacity = '1';
+            nodeSideConnections.get(sourceKey).push({
+                nodeId: conn.source,
+                side: sourceSide,
+                position: sourcePosition,
+                x: x1,
+                y: y1
+            });
+            
+            // Track connection points for target
+            const targetKey = `${conn.target}-${targetSide}`;
+            if (!nodeSideConnections.has(targetKey)) {
+                nodeSideConnections.set(targetKey, []);
             }
+            const targetPosition = targetSide === 'right' || targetSide === 'left'
+                ? (y2 - (targetRect.top - diagramRect.top)) / targetRect.height
+                : (x2 - (targetRect.left - diagramRect.left)) / targetRect.width;
+            
+            nodeSideConnections.get(targetKey).push({
+                nodeId: conn.target,
+                side: targetSide,
+                position: targetPosition,
+                x: x2,
+                y: y2
+            });
+        });
+        
+        // Create connection points for each node side
+        nodeSideConnections.forEach((connections, key) => {
+            connections.forEach(conn => {
+                const node = document.getElementById(conn.nodeId);
+                if (!node) return;
+                
+                // Create a connection point
+                const point = document.createElement('div');
+                point.className = `connection-point connection-indicator ${conn.side}-indicator active`;
+                point.setAttribute('data-side', conn.side);
+                point.style.setProperty('--connection-pos', `${conn.position * 100}%`);
+                point.style.opacity = '1';
+                
+                // Add to the node
+                node.appendChild(point);
+            });
         });
     }
 }
