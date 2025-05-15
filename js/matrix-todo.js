@@ -1,7 +1,7 @@
 import WhatsNewModal from './whats-new-modal.js';
 import SettingsModal from './settings-modal.js';
-import TaskManager from './TaskManager.js';
-import NotesManager from './NotesManager.js';
+import TaskManager from './task-manager.js';
+import NotesManager from './notes-manager.js';
 
 class MatrixTodo {
     constructor() {
