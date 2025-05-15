@@ -1519,3 +1519,158 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     white-space: nowrap;
     text-shadow: 0 0 1px rgba(var(--matrix-green-rgb), 0.3);
 }
+
+/* Right side indicator */
+.right-indicator {
+    top: 0;
+    right: 0;
+    width: 1px; /* Even thinner for sharper appearance */
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    /* Add back the intense glow effect for connections */
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+/* Left side indicator */
+.left-indicator {
+    top: 0;
+    left: 0;
+    width: 1px; /* Even thinner for sharper appearance */
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    /* Add back the intense glow effect for connections */
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+/* Top side indicator */
+.top-indicator {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px; /* Even thinner for sharper appearance */
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    /* Add back the intense glow effect for connections */
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+/* Bottom side indicator */
+.bottom-indicator {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px; /* Even thinner for sharper appearance */
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos), /* Stronger center point */
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%), /* Tighter gradient */
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    /* Add back the intense glow effect for connections */
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+/* Add active class for connection indicators */
+.connection-indicator.active {
+    animation: indicatorPulse 3s infinite;
+}
+
+/* Refined animation for indicator pulse - sharper and more intense */
+@keyframes indicatorPulse {
+    0% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 1.0)) 
+               drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
+    }
+    100% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
+}
+
+/* Add connectionFlow animation for animated dashed lines */
+@keyframes connectionFlow {
+    0% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 1000;
+    }
+}
+
+/* Animation for subtle node pulsing */
+@keyframes subtleNodePulse {
+    0% {
+        box-shadow: 
+            0 0 10px rgba(0, 0, 0, 0.3),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.1);
+        border-color: rgba(var(--matrix-green-rgb), 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 0 15px rgba(0, 0, 0, 0.4),
+            inset 0 0 5px rgba(var(--matrix-green-rgb), 0.2);
+        border-color: rgba(var(--matrix-green-rgb), 0.5);
+    }
+    100% {
+        box-shadow: 
+            0 0 10px rgba(0, 0, 0, 0.3),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.1);
+        border-color: rgba(var(--matrix-green-rgb), 0.3);
+    }
+}
+
+/* Dynamic connection points for multiple connections per side */
+.connection-point {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15; /* Ensure it appears above the standard indicators */
+    /* Position will be set dynamically */
+}
+
+/* Make temporary connection points more vibrant */
+.temp-connection-point {
+    filter: drop-shadow(0 0 2px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
+    opacity: 1 !important;
+}
