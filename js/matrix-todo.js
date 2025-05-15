@@ -44,6 +44,7 @@ class MatrixTodo {
 
         this.bindEvents();
         this.bindContextMenu();
+        this.bindPageContextMenu();
         this.render();
 
         this.currentCategory = 'normal';
@@ -119,18 +120,6 @@ class MatrixTodo {
         // Render initial diagram
         this.diagramManager.renderDiagram();
         
-        // Add message listener for context menu
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.action === "addNote") {
-                this.notesManager.addNote();
-            } else if (request.action === "addDiagramNode") {
-                // Create node at cursor position or center if not available
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-                this.diagramManager.createNode(viewportWidth / 2, viewportHeight / 2);
-            }
-        });
-
         // Update the initial placeholder styling with reduced glow
         this.taskInput.style.color = 'var(--matrix-green)';
         this.taskInput.style.textShadow = `
@@ -793,6 +782,81 @@ class MatrixTodo {
                 this.suggestionsDropdown.style.display = 'none';
                 break;
         }
+    }
+
+    bindPageContextMenu() {
+        // Add context menu to the entire document (except when on task or node items)
+        document.addEventListener('contextmenu', (e) => {
+            // Don't show our custom menu if right-clicking on a task item or diagram node
+            // as they have their own context menus
+            const taskItem = e.target.closest('.task-item');
+            const diagramNode = e.target.closest('.diagram-node');
+            
+            if (taskItem || diagramNode) return;
+            
+            e.preventDefault();
+            
+            // Remove any existing context menus first
+            const existingMenus = document.querySelectorAll('.matrix-context-menu');
+            existingMenus.forEach(menu => menu.remove());
+            
+            // Create our custom menu
+            const menu = document.createElement('div');
+            menu.className = 'matrix-context-menu';
+            menu.innerHTML = `
+                <div class="menu-item" data-action="add-note">ADD NOTE</div>
+                <div class="menu-item" data-action="add-diagram-node">ADD DIAGRAM NODE</div>
+            `;
+            
+            // First append menu to get its dimensions
+            document.body.appendChild(menu);
+            
+            // Calculate position to avoid going off screen
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            const { offsetWidth, offsetHeight } = menu;
+            
+            // Position the menu (ensure it doesn't go off screen)
+            const menuX = clientX + offsetWidth > innerWidth 
+                ? innerWidth - offsetWidth - 10 // 10px margin from right edge
+                : clientX;
+                
+            const menuY = clientY + offsetHeight > innerHeight 
+                ? innerHeight - offsetHeight - 10 // 10px margin from bottom edge
+                : clientY;
+            
+            menu.style.left = `${menuX}px`;
+            menu.style.top = `${menuY}px`;
+            
+            // Capture the position for creating elements later
+            const position = { x: clientX, y: clientY };
+            
+            // Add event listeners for menu items
+            menu.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const action = item.getAttribute('data-action');
+                    
+                    if (action === 'add-note') {
+                        this.notesManager.addNote();
+                    } else if (action === 'add-diagram-node') {
+                        this.diagramManager.createNode(position.x, position.y);
+                    }
+                    
+                    document.body.removeChild(menu);
+                });
+            });
+            
+            // Close menu when clicking outside
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    if (document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                    }
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            document.addEventListener('click', closeMenu);
+        });
     }
 }
 
