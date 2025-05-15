@@ -1269,7 +1269,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     min-width: 150px;
     min-height: 60px;
     pointer-events: auto;
-    cursor: move;
+    cursor: move; /* Move cursor only for the node container */
     will-change: transform;
     z-index: 12;
     box-shadow: 
@@ -1280,6 +1280,35 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     display: flex;
     flex-direction: column;
     padding: 8px;
+}
+
+/* Node header for dragging - create an invisible drag area at the top */
+.diagram-node::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 24px; /* Height of drag area */
+    cursor: move;
+    z-index: 1;
+}
+
+.node-content {
+    color: var(--matrix-green);
+    font-family: monospace;
+    font-size: 14px;
+    padding: 8px;
+    outline: none;
+    flex: 1;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.3),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    letter-spacing: 1px;
+    opacity: 0.8;
+    cursor: text; /* Text cursor specifically for the content */
+    position: relative;
+    z-index: 2; /* Ensure content is above the drag handle */
 }
 
 .diagram-node:hover {
@@ -1322,21 +1351,6 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     opacity: 0.6;
 }
 
-.node-content {
-    color: var(--matrix-green);
-    font-family: monospace;
-    font-size: 14px;
-    padding: 8px;
-    outline: none;
-    flex: 1;
-    text-shadow: 
-        0 0 2px rgba(var(--matrix-green-rgb), 0.3),
-        0 0 4px rgba(var(--matrix-green-rgb), 0.2);
-    letter-spacing: 1px;
-    opacity: 0.8;
-}
-
-/* Connection handle that appears on hover - more subtle */
 .connection-handle {
     position: absolute;
     bottom: -8px;
