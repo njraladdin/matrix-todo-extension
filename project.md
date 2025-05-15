@@ -10,6 +10,7 @@
 
 
 - add tree diagram feature, done 
-$
-- abiltiy to add line rbeaks to node
-- add some sort of tags to a diagram node , will be used to list tehcnilogies used for that project
+
+- abiltiy to add line breaks in diagram blocks, done 
+
+- add some sort of tags to a diagram node , will be used to list tehcnologies used for that project

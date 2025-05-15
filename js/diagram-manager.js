@@ -91,8 +91,25 @@ class DiagramManager {
      * Save state to localStorage
      */
     saveState() {
-        localStorage.setItem('matrix-diagram-nodes', JSON.stringify(this.nodes));
-        localStorage.setItem('matrix-diagram-connections', JSON.stringify(this.connections));
+        // Make sure we're only saving what's necessary
+        // Create clean copies of data without any potential circular references
+        const cleanNodes = this.nodes.map(node => ({
+            id: node.id,
+            content: node.content, // This now contains HTML with preserved line breaks
+            position: {
+                x: node.position.x,
+                y: node.position.y
+            }
+        }));
+        
+        const cleanConnections = this.connections.map(conn => ({
+            id: conn.id,
+            source: conn.source,
+            target: conn.target
+        }));
+        
+        localStorage.setItem('matrix-diagram-nodes', JSON.stringify(cleanNodes));
+        localStorage.setItem('matrix-diagram-connections', JSON.stringify(cleanConnections));
     }
     
     /**
@@ -198,13 +215,45 @@ class DiagramManager {
             this.deleteNode(node.id);
         });
         
+        // Handle backward compatibility - if node has title and tags, convert to content
+        if (node.title !== undefined && node.content === undefined) {
+            // Create content from title and tags if they exist
+            let newContent = node.title || '';
+            if (node.tags && node.tags.length > 0) {
+                // Add each tag as a hashtag
+                newContent += ' ' + node.tags.map(tag => `#${tag}`).join(' ');
+            }
+            node.content = newContent;
+            delete node.title;
+            delete node.tags;
+            this.saveState();
+        }
+        
+        // Create content editable div
         const content = document.createElement('div');
         content.className = 'node-content';
         content.contentEditable = true;
-        content.textContent = node.content;
+        
+        // Use innerHTML instead of textContent to preserve line breaks
+        if (node.content.includes('<br') || node.content.includes('\n') || node.content.includes('</div>')) {
+            // This content contains line breaks, use it directly as HTML
+            content.innerHTML = node.content;
+        } else {
+            // For simple content without line breaks, use textContent for safety
+            content.textContent = node.content;
+        }
+        
+        content.spellcheck = false;
         content.addEventListener('input', (e) => {
-            this.updateNodeContent(node.id, e.target.textContent);
+            // Use innerHTML to capture formatted content including line breaks
+            this.updateNodeContent(node.id, e.target.innerHTML);
+            this.updateNodeTags(node.id);
         });
+        
+        // Create tags container for floating tags
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'node-floating-tags';
+        nodeEl.appendChild(tagsContainer);
         
         nodeEl.appendChild(deleteBtn);
         nodeEl.appendChild(content);
@@ -216,6 +265,203 @@ class DiagramManager {
         
         // Initialize dragging
         this.initializeNodeDragging(nodeEl);
+        
+        // Apply hashtag highlighting to content
+        this.highlightHashtags(content);
+        
+        // Parse and display any hashtags
+        this.updateNodeTags(node.id);
+    }
+    
+    /**
+     * Parse hashtags from node content and create floating tags
+     */
+    updateNodeTags(nodeId) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (!node || !node.content) return;
+        
+        const nodeElement = document.getElementById(nodeId);
+        if (!nodeElement) return;
+        
+        // Clear existing floating tags
+        const tagsContainer = nodeElement.querySelector('.node-floating-tags');
+        if (!tagsContainer) return;
+        tagsContainer.innerHTML = '';
+        
+        // Get a text-only version of content for hashtag extraction
+        let plainContent = node.content;
+        
+        // If content has HTML, create a temporary element to extract plain text
+        if (node.content.includes('<')) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = node.content;
+            plainContent = tempDiv.textContent;
+        }
+        
+        // Extract hashtags using regex
+        const hashtags = plainContent.match(/#[a-zA-Z0-9_]+/g) || [];
+        if (hashtags.length === 0) return;
+        
+        // Create floating tags for each hashtag in a row above the node
+        hashtags.forEach((hashtag, index) => {
+            const tag = document.createElement('div');
+            tag.className = 'floating-tag';
+            tag.textContent = hashtag.substring(1); // Remove the # symbol
+            
+            // Add tag to container first so we can measure its width
+            tagsContainer.appendChild(tag);
+            
+            // We'll position the tags after all are created and measured
+        });
+        
+        // Now position all tags with proper measurements
+        const tagElements = tagsContainer.querySelectorAll('.floating-tag');
+        const tagSpacing = 5; // Space between tags
+        const tagsPerRow = 5; // Max tags per row
+        
+        // Get actual widths for each tag
+        const tagWidths = Array.from(tagElements).map(el => el.offsetWidth);
+        const nodeWidth = nodeElement.offsetWidth;
+        
+        // Now position each tag with accurate measurements
+        tagElements.forEach((tagEl, index) => {
+            const row = Math.floor(index / tagsPerRow);
+            const rowStart = row * tagsPerRow;
+            const rowEnd = Math.min((row + 1) * tagsPerRow, tagElements.length);
+            
+            // Calculate which tags are in this row
+            const thisRowTags = tagWidths.slice(rowStart, rowEnd);
+            const totalRowWidth = thisRowTags.reduce((sum, width) => sum + width, 0) + 
+                                  (thisRowTags.length - 1) * tagSpacing;
+            
+            // Calculate starting X position to center the row
+            let startX = (nodeWidth - totalRowWidth) / 2;
+            
+            // Set position for each tag in the row
+            for (let i = rowStart; i < rowEnd; i++) {
+                if (i === index) {
+                    const x = startX;
+                    const y = -30 - (row * 25); // 25px vertical spacing between rows, starting 30px above
+                    
+                    tagElements[i].style.setProperty('--tag-x', `${x}px`);
+                    tagElements[i].style.setProperty('--tag-y', `${y}px`);
+                    tagElements[i].style.setProperty('--tag-delay', `${index * 0.05}s`);
+                    break;
+                }
+                startX += tagWidths[i] + tagSpacing;
+            }
+        });
+    }
+    
+    /**
+     * Update node content
+     */
+    updateNodeContent(nodeId, content) {
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (node) {
+            // Store the raw HTML content to preserve line breaks
+            node.content = content;
+            this.saveState();
+            
+            // Update the DOM element directly to avoid full re-render
+            const nodeElement = document.getElementById(nodeId);
+            if (nodeElement) {
+                const contentElement = nodeElement.querySelector('.node-content');
+                // Don't use textContent here as it would lose formatting
+                // We'll let the browser's contentEditable handle the formatting
+                
+                // Only apply hashtag highlighting when there's no risk of losing formatting
+                if (!content.includes('\n') && !content.includes('<br') && !content.includes('</div>')) {
+                    this.highlightHashtags(contentElement);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Highlight hashtags in node content
+     */
+    highlightHashtags(contentElement) {
+        try {
+            // Save current cursor position if there is a selection
+            const selection = window.getSelection();
+            let cursorOffset = 0;
+            let hasSelection = false;
+            
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                cursorOffset = range.startOffset;
+                hasSelection = true;
+            }
+            
+            // Get the text content - use innerHTML to preserve line breaks
+            const text = contentElement.innerHTML || '';
+            
+            // Check if there are hashtags
+            if (!text.includes('#')) return;
+            
+            // Skip hashtag highlighting if text contains line breaks
+            // This is needed to preserve line breaks - let's just not highlight in this case
+            if (text.includes('\n') || text.includes('<br') || text.includes('</div>')) {
+                // Line breaks are present - don't process with regex to avoid breaking format
+                return;
+            }
+            
+            // Create temporary div to build HTML
+            const tempDiv = document.createElement('div');
+            
+            // Replace hashtags with highlighted spans
+            const htmlContent = text.replace(/#[a-zA-Z0-9_]+/g, match => {
+                return `<span class="hashtag">${match}</span>`;
+            });
+            
+            tempDiv.innerHTML = htmlContent;
+            
+            // Replace content in the node
+            contentElement.innerHTML = tempDiv.innerHTML;
+            
+            // Restore cursor position if there was a selection
+            if (hasSelection) {
+                const newRange = document.createRange();
+                
+                // Find the right node and position
+                let currentNode = contentElement.firstChild;
+                let currentOffset = 0;
+                let targetNode = contentElement.firstChild;
+                let targetOffset = cursorOffset;
+                
+                // Navigate through the nodes to find the position
+                while (currentNode && currentOffset + currentNode.textContent.length < cursorOffset) {
+                    currentOffset += currentNode.textContent.length;
+                    currentNode = currentNode.nextSibling;
+                }
+                
+                if (currentNode) {
+                    targetNode = currentNode;
+                    targetOffset = cursorOffset - currentOffset;
+                    
+                    // Adjust if inside a span (hashtag)
+                    if (targetNode.nodeType === Node.ELEMENT_NODE && targetNode.tagName.toLowerCase() === 'span') {
+                        targetNode = targetNode.firstChild;
+                    }
+                }
+                
+                // Set range and selection
+                if (targetNode && targetNode.nodeType === Node.TEXT_NODE) {
+                    newRange.setStart(targetNode, Math.min(targetOffset, targetNode.textContent.length));
+                    newRange.setEnd(targetNode, Math.min(targetOffset, targetNode.textContent.length));
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+            }
+        } catch (e) {
+            console.error('Error in highlightHashtags:', e);
+            // Fallback to plain text if there's an error
+            if (contentElement) {
+                // Don't modify the content when error occurs
+                console.log('Hashtag highlighting skipped due to error');
+            }
+        }
     }
     
     /**
@@ -318,26 +564,6 @@ class DiagramManager {
         
         this.saveState();
         this.renderDiagram();
-    }
-    
-    /**
-     * Update node content
-     */
-    updateNodeContent(nodeId, content) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node) {
-            node.content = content;
-            this.saveState();
-            
-            // Update the DOM element directly to avoid full re-render
-            const nodeElement = document.getElementById(nodeId);
-            if (nodeElement) {
-                const contentElement = nodeElement.querySelector('.node-content');
-                if (contentElement && contentElement.textContent !== content) {
-                    contentElement.textContent = content;
-                }
-            }
-        }
     }
     
     /**
@@ -550,7 +776,9 @@ class DiagramManager {
         const content = nodeElement.querySelector('.node-content');
         if (content) {
             content.addEventListener('input', (e) => {
-                this.updateNodeContent(nodeElement.id, e.target.textContent);
+                // Use innerHTML to capture formatted content including line breaks
+                this.updateNodeContent(nodeElement.id, e.target.innerHTML);
+                this.updateNodeTags(nodeElement.id);
             });
         }
         
