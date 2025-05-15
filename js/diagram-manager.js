@@ -253,8 +253,9 @@ class DiagramManager {
         // Create tags container for floating tags
         const tagsContainer = document.createElement('div');
         tagsContainer.className = 'node-floating-tags';
-        nodeEl.appendChild(tagsContainer);
         
+        // Add elements to the node in the correct order
+        nodeEl.appendChild(tagsContainer);
         nodeEl.appendChild(deleteBtn);
         nodeEl.appendChild(content);
         
@@ -303,53 +304,13 @@ class DiagramManager {
         if (hashtags.length === 0) return;
         
         // Create floating tags for each hashtag in a row above the node
-        hashtags.forEach((hashtag, index) => {
+        hashtags.forEach((hashtag) => {
             const tag = document.createElement('div');
             tag.className = 'floating-tag';
             tag.textContent = hashtag.substring(1); // Remove the # symbol
             
-            // Add tag to container first so we can measure its width
+            // Add tag to container
             tagsContainer.appendChild(tag);
-            
-            // We'll position the tags after all are created and measured
-        });
-        
-        // Now position all tags with proper measurements
-        const tagElements = tagsContainer.querySelectorAll('.floating-tag');
-        const tagSpacing = 5; // Space between tags
-        const tagsPerRow = 5; // Max tags per row
-        
-        // Get actual widths for each tag
-        const tagWidths = Array.from(tagElements).map(el => el.offsetWidth);
-        const nodeWidth = nodeElement.offsetWidth;
-        
-        // Now position each tag with accurate measurements
-        tagElements.forEach((tagEl, index) => {
-            const row = Math.floor(index / tagsPerRow);
-            const rowStart = row * tagsPerRow;
-            const rowEnd = Math.min((row + 1) * tagsPerRow, tagElements.length);
-            
-            // Calculate which tags are in this row
-            const thisRowTags = tagWidths.slice(rowStart, rowEnd);
-            const totalRowWidth = thisRowTags.reduce((sum, width) => sum + width, 0) + 
-                                  (thisRowTags.length - 1) * tagSpacing;
-            
-            // Calculate starting X position to center the row
-            let startX = (nodeWidth - totalRowWidth) / 2;
-            
-            // Set position for each tag in the row
-            for (let i = rowStart; i < rowEnd; i++) {
-                if (i === index) {
-                    const x = startX;
-                    const y = -30 - (row * 25); // 25px vertical spacing between rows, starting 30px above
-                    
-                    tagElements[i].style.setProperty('--tag-x', `${x}px`);
-                    tagElements[i].style.setProperty('--tag-y', `${y}px`);
-                    tagElements[i].style.setProperty('--tag-delay', `${index * 0.05}s`);
-                    break;
-                }
-                startX += tagWidths[i] + tagSpacing;
-            }
         });
     }
     

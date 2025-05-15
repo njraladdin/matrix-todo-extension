@@ -1281,6 +1281,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     display: flex;
     flex-direction: column;
     padding: 8px;
+    margin-top: 18px;
 }
 
 /* Node header for dragging - create an invisible drag area at the top */
@@ -1492,4 +1493,29 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     dominant-baseline: middle;
     pointer-events: auto;
     transition: opacity 0.2s ease;
+}
+
+/* Add styles for floating tags */
+.node-floating-tags {
+    position: absolute;
+    top: -24px; /* Position above the node */
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    z-index: 2;
+}
+
+.floating-tag {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    color: var(--matrix-green);
+    font-size: 12px;
+    padding: 1px 5px;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-shadow: 0 0 1px rgba(var(--matrix-green-rgb), 0.3);
 }
