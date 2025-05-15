@@ -505,17 +505,73 @@ class DiagramManager {
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('id', conn.id);
         line.classList.add('diagram-connection');
+        line.style.cursor = 'pointer'; // Add pointer cursor to indicate clickability
         
         // Add delete button for the connection
         const deleteBtn = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        deleteBtn.textContent = '×';
+        deleteBtn.textContent = '×'; // Simple X character
         deleteBtn.classList.add('delete-connection-btn');
         deleteBtn.setAttribute('data-connection-id', conn.id);
         
+        // Create a wider invisible hit area to make hovering easier
+        const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hitArea.setAttribute('id', `hit-${conn.id}`);
+        hitArea.classList.add('connection-hit-area');
+        hitArea.style.cursor = 'pointer';
+        hitArea.style.stroke = 'transparent';
+        hitArea.style.strokeWidth = '10px'; // Much wider than the visible line
+        hitArea.style.pointerEvents = 'stroke'; // Only detect events on the stroke
+        
+        // Add event listeners to the hit area
+        hitArea.addEventListener('mouseenter', () => {
+            deleteBtn.style.opacity = '0.8';
+        });
+        
+        hitArea.addEventListener('mouseleave', (e) => {
+            // Check if the cursor moved from the line to the delete button
+            // by checking all elements under the cursor after leaving
+            const elementsUnderCursor = document.elementsFromPoint(e.clientX, e.clientY);
+            const isOverDeleteBtn = elementsUnderCursor.some(el => 
+                el === deleteBtn || el.classList.contains('delete-connection-btn')
+            );
+            
+            if (!isOverDeleteBtn) {
+                deleteBtn.style.opacity = '0';
+            }
+        });
+        
+        // Events for the delete button
+        deleteBtn.addEventListener('mouseenter', () => {
+            deleteBtn.style.opacity = '0.8';
+        });
+        
+        deleteBtn.addEventListener('mouseleave', (e) => {
+            // Check if cursor is over the hit area or line
+            const elementsUnderCursor = document.elementsFromPoint(e.clientX, e.clientY);
+            const isOverLine = elementsUnderCursor.some(el => 
+                el === line || el === hitArea
+            );
+            
+            if (!isOverLine) {
+                deleteBtn.style.opacity = '0';
+            }
+        });
+        
+        // Add click events to both the line and hit area
+        line.addEventListener('click', () => {
+            this.deleteConnection(conn.id);
+        });
+        
+        hitArea.addEventListener('click', () => {
+            this.deleteConnection(conn.id);
+        });
+        
+        // Add elements to the SVG in proper order
         connectionsContainer.appendChild(line);
+        connectionsContainer.appendChild(hitArea);
         connectionsContainer.appendChild(deleteBtn);
         
-        // Draw the connection line
+        // Draw the connection line and hit area
         this.drawConnectionLine(conn.id, conn.source, conn.target);
         
         // Position delete button
@@ -911,6 +967,7 @@ class DiagramManager {
         const sourceNode = document.getElementById(sourceId);
         const targetNode = document.getElementById(targetId);
         const connectionLine = document.getElementById(connId);
+        const hitArea = document.getElementById(`hit-${connId}`);
         
         if (!sourceNode || !targetNode || !connectionLine) return;
         
@@ -935,6 +992,14 @@ class DiagramManager {
         connectionLine.setAttribute('y1', sourceIntersection.y);
         connectionLine.setAttribute('x2', targetIntersection.x);
         connectionLine.setAttribute('y2', targetIntersection.y);
+        
+        // Update hit area if it exists
+        if (hitArea) {
+            hitArea.setAttribute('x1', sourceIntersection.x);
+            hitArea.setAttribute('y1', sourceIntersection.y);
+            hitArea.setAttribute('x2', targetIntersection.x);
+            hitArea.setAttribute('y2', targetIntersection.y);
+        }
     }
     
     /**
