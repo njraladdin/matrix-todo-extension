@@ -206,14 +206,6 @@ class DiagramManager {
             this.updateNodeContent(node.id, e.target.textContent);
         });
         
-        // Prevent default behavior for better editing
-        content.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                content.blur();
-            }
-        });
-        
         nodeEl.appendChild(deleteBtn);
         nodeEl.appendChild(content);
         
@@ -559,13 +551,6 @@ class DiagramManager {
         if (content) {
             content.addEventListener('input', (e) => {
                 this.updateNodeContent(nodeElement.id, e.target.textContent);
-            });
-            
-            content.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    content.blur();
-                }
             });
         }
         
