@@ -1,4 +1,5 @@
 import WhatsNewModal from './whats-new-modal.js';
+import SettingsModal from './settings-modal.js';
 
 class MatrixTodo {
     constructor() {
@@ -156,6 +157,7 @@ class MatrixTodo {
             console.error('What\'s New button not found!');
         }
 
+        // Initialize task history
         this.taskHistory = {};
         const savedHistory = localStorage.getItem('matrix-tasks-history');
         if (savedHistory) {
@@ -167,7 +169,8 @@ class MatrixTodo {
             }
         }
         
-        this.initializeSettings();
+        // Initialize Settings Modal
+        this.settingsModal = new SettingsModal(this);
 
         // Add new property for suggestions dropdown
         this.suggestionsDropdown = document.createElement('div');
@@ -336,7 +339,7 @@ class MatrixTodo {
         this.tasks.unshift(task);
         localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
 
-        this.addToHistory(task);
+        this.settingsModal.addToHistory(task);
 
         if (this.isGlobalEnabled) {
             this.sandbox.contentWindow.postMessage({ type: "addTask", task }, "*");
@@ -1003,84 +1006,6 @@ class MatrixTodo {
         });
         
         this.render();
-    }
-
-    initializeSettings() {
-        this.settingsWheel = document.querySelector('.settings-wheel');
-        this.settingsModal = document.querySelector('.settings-modal');
-        this.closeSettings = document.querySelector('.close-settings');
-        this.historyContainer = document.querySelector('.history-container');
-
-        this.settingsWheel.addEventListener('click', () => {
-            this.settingsModal.classList.add('active');
-            this.renderHistory();
-        });
-
-        this.closeSettings.addEventListener('click', () => {
-            this.settingsModal.classList.remove('active');
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target === this.settingsModal) {
-                this.settingsModal.classList.remove('active');
-            }
-        });
-    }
-
-    addToHistory(task) {
-        if (!task || !task.timestamp) {
-            console.warn('Invalid task or missing timestamp:', task);
-            return;
-        }
-
-        try {
-            const date = new Date(task.timestamp).toLocaleDateString();
-            if (!this.taskHistory) {
-                this.taskHistory = {};
-            }
-            if (!this.taskHistory[date]) {
-                this.taskHistory[date] = [];
-            }
-            this.taskHistory[date].push(task);
-            localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
-        } catch (e) {
-            console.error('Error adding task to history:', e);
-        }
-    }
-
-    renderHistory() {
-        if (!this.historyContainer) return;
-        
-        // Sort dates in descending order (most recent first)
-        const dates = Object.keys(this.taskHistory).sort((a, b) => 
-            new Date(b) - new Date(a)
-        );
-
-        const html = dates.map(date => {
-            // Sort tasks within each day by timestamp in descending order
-            const tasks = this.taskHistory[date].sort((a, b) => 
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-            
-            return `
-                <div class="history-day">
-                    <div class="history-date">${date}</div>
-                    <div class="history-tasks">
-                        ${tasks.map(task => `
-                            <div class="history-task ${task.completed ? 'completed' : ''} ${task.category}">
-                                <span class="history-time">
-                                    ${new Date(task.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
-                                <span class="history-text">${task.text}</span>
-                                ${task.group ? `<span class="history-group">#${task.group}</span>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        this.historyContainer.innerHTML = html;
     }
 
     showGroupSuggestions() {

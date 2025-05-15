@@ -5,6 +5,7 @@
 - Settings is not visible, done 
 - tasks in backlog group are not counted in progress, done 
 - able to drag tasks between groups, done 
-
 - change update manager to whats new modal, done 
+- clean up code / refactor, done 
+
 - switch button to diagram 
