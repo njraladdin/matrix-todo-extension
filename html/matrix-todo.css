@@ -1353,9 +1353,9 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 .connection-handle {
     position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -1371,7 +1371,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 /* Show handle on hover */
 .diagram-node:hover .connection-handle {
     opacity: 0.6;
-    transform: translateX(-50%) scale(1);
+    transform: translateY(-50%) scale(1);
     animation: subtleHandlePulse 3s infinite;
 }
 
@@ -1379,7 +1379,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     opacity: 0.8;
     border: 1px solid rgba(var(--matrix-green-rgb), 0.4);
     box-shadow: 0 0 6px rgba(var(--matrix-green-rgb), 0.4);
-    transform: translateX(-50%) scale(1.1);
+    transform: translateY(-50%) scale(1.1);
 }
 
 /* More subtle connection lines */
@@ -1542,4 +1542,86 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
             0 0 5px rgba(0, 0, 0, 0.3),
             inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
     }
+}
+
+/* Connection point indicators */
+.connection-indicator {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    --connection-pos: 50%; /* Default to middle position */
+}
+
+.connection-indicator.active {
+    opacity: 1;
+}
+
+/* Right side indicator */
+.right-indicator {
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+}
+
+/* Left side indicator */
+.left-indicator {
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+}
+
+/* Top side indicator */
+.top-indicator {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+}
+
+/* Bottom side indicator */
+.bottom-indicator {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.6) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+}
+
+/* Active connection indicators should glow more */
+.connection-indicator.active {
+    animation: indicatorPulse 3s infinite;
 }

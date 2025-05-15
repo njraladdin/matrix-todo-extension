@@ -167,7 +167,7 @@ class DiagramManager {
         this.connectionDrag = {
             isActive: true,
             sourceNode: nodeId,
-            startX: x,
+            startX: x,  // We'll calculate edge intersection in updateTemporaryConnectionLine
             startY: y,
             currentX: x,
             currentY: y
@@ -176,6 +176,9 @@ class DiagramManager {
         // Create temporary connection line
         this.createTemporaryConnectionLine(x, y, x, y);
         this.diagramOverlay.classList.add('connection-dragging');
+        
+        // Immediately update to calculate proper source point
+        this.updateTemporaryConnectionLine(x, y, x, y);
     }
     
     /**
@@ -267,10 +270,94 @@ class DiagramManager {
     updateTemporaryConnectionLine(x1, y1, x2, y2) {
         const line = document.getElementById('temp-connection');
         if (line) {
-            line.setAttribute('x1', x1);
-            line.setAttribute('y1', y1);
-            line.setAttribute('x2', x2);
-            line.setAttribute('y2', y2);
+            // Check if there's a source node to adjust starting point
+            const sourceNode = document.getElementById(this.connectionDrag.sourceNode);
+            if (sourceNode) {
+                const diagramRect = this.diagramOverlay.getBoundingClientRect();
+                const sourceRect = sourceNode.getBoundingClientRect();
+                
+                // Calculate source node center
+                const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
+                const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
+                
+                // Calculate angle between source center and cursor
+                const angle = Math.atan2(y2 - sourceCenterY, x2 - sourceCenterX);
+                
+                // Calculate source node border intersection
+                const sourceNodeHalfWidth = sourceRect.width / 2;
+                const sourceNodeHalfHeight = sourceRect.height / 2;
+                
+                // Determine source intersection point
+                let sourceX, sourceY;
+                
+                // Find border point based on angle
+                if (Math.abs(Math.cos(angle)) * sourceNodeHalfHeight > Math.abs(Math.sin(angle)) * sourceNodeHalfWidth) {
+                    // Intersects with left or right edge
+                    sourceX = sourceCenterX + Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
+                    sourceY = sourceCenterY + Math.tan(angle) * Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
+                } else {
+                    // Intersects with top or bottom edge
+                    sourceX = sourceCenterX + Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
+                    sourceY = sourceCenterY + Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
+                }
+                
+                // Set adjusted line attributes
+                line.setAttribute('x1', sourceX);
+                line.setAttribute('y1', sourceY);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                
+                // Determine which side of source node is connected
+                let sourceSide;
+                
+                const sourceDistanceToRight = Math.abs(sourceX - (sourceCenterX + sourceRect.width / 2));
+                const sourceDistanceToLeft = Math.abs(sourceX - (sourceCenterX - sourceRect.width / 2));
+                const sourceDistanceToTop = Math.abs(sourceY - (sourceCenterY - sourceRect.height / 2));
+                const sourceDistanceToBottom = Math.abs(sourceY - (sourceCenterY + sourceRect.height / 2));
+                
+                const sourceMinDistance = Math.min(
+                    sourceDistanceToRight, 
+                    sourceDistanceToLeft,
+                    sourceDistanceToTop,
+                    sourceDistanceToBottom
+                );
+                
+                if (sourceMinDistance === sourceDistanceToRight) sourceSide = 'right';
+                else if (sourceMinDistance === sourceDistanceToLeft) sourceSide = 'left';
+                else if (sourceMinDistance === sourceDistanceToTop) sourceSide = 'top';
+                else sourceSide = 'bottom';
+                
+                // Reset all indicators on this node first
+                const indicators = sourceNode.querySelectorAll('.connection-indicator');
+                indicators.forEach(indicator => {
+                    indicator.classList.remove('active');
+                    indicator.style.opacity = '0';
+                });
+                
+                // Activate the appropriate indicator
+                const sourceIndicator = sourceNode.querySelector(`.${sourceSide}-indicator`);
+                if (sourceIndicator) {
+                    sourceIndicator.classList.add('active');
+                    
+                    // Calculate position along the side to place the glow
+                    if (sourceSide === 'right' || sourceSide === 'left') {
+                        // Position vertically
+                        const relativeY = (sourceY - (sourceRect.top - diagramRect.top)) / sourceRect.height;
+                        sourceIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
+                    } else {
+                        // Position horizontally
+                        const relativeX = (sourceX - (sourceRect.left - diagramRect.left)) / sourceRect.width;
+                        sourceIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
+                    }
+                    sourceIndicator.style.opacity = '1';
+                }
+            } else {
+                // If no source node (shouldn't happen normally), use original coordinates
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+            }
         }
     }
     
@@ -318,11 +405,12 @@ class DiagramManager {
             
             const nodeId = nodeElement.id;
             const rect = this.diagramOverlay.getBoundingClientRect();
-            const handleRect = handle.getBoundingClientRect();
+            const nodeRect = nodeElement.getBoundingClientRect();
             
-            // Use handle center as starting point
-            const startX = handleRect.left + handleRect.width/2 - rect.left;
-            const startY = handleRect.top + handleRect.height/2 - rect.top;
+            // Calculate starting point at the edge of the node where the handle is
+            // Using the node's right center point for starting point
+            const startX = nodeRect.right - rect.left;
+            const startY = nodeRect.top + nodeRect.height / 2 - rect.top;
             
             this.startConnectionDrag(nodeId, startX, startY);
         });
@@ -389,6 +477,9 @@ class DiagramManager {
         this.connections.forEach(conn => {
             this.drawConnectionLine(conn.id, conn.source, conn.target);
         });
+        
+        // Update the connection indicators as well
+        this.updateConnectionIndicators();
     }
     
     /**
@@ -406,11 +497,48 @@ class DiagramManager {
         const diagramRect = this.diagramOverlay.getBoundingClientRect();
         
         // Calculate center points
-        const sourceX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
-        const sourceY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
-        const targetX = targetRect.left + targetRect.width / 2 - diagramRect.left;
-        const targetY = targetRect.top + targetRect.height / 2 - diagramRect.top;
+        const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
+        const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
+        const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
+        const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
         
+        // Calculate angle between centers
+        const angle = Math.atan2(targetCenterY - sourceCenterY, targetCenterX - sourceCenterX);
+        
+        // Calculate source node border intersection
+        const sourceNodeHalfWidth = sourceRect.width / 2;
+        const sourceNodeHalfHeight = sourceRect.height / 2;
+        
+        // Calculate target node border intersection
+        const targetNodeHalfWidth = targetRect.width / 2;
+        const targetNodeHalfHeight = targetRect.height / 2;
+        
+        // Determine intersection points
+        let sourceX, sourceY, targetX, targetY;
+        
+        // Source intersection - find border point based on angle
+        if (Math.abs(Math.cos(angle)) * sourceNodeHalfHeight > Math.abs(Math.sin(angle)) * sourceNodeHalfWidth) {
+            // Intersects with left or right edge
+            sourceX = sourceCenterX + Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
+            sourceY = sourceCenterY + Math.tan(angle) * Math.sign(Math.cos(angle)) * sourceNodeHalfWidth;
+        } else {
+            // Intersects with top or bottom edge
+            sourceX = sourceCenterX + Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
+            sourceY = sourceCenterY + Math.sign(Math.sin(angle)) * sourceNodeHalfHeight;
+        }
+        
+        // Target intersection - find border point based on reverse angle
+        if (Math.abs(Math.cos(angle)) * targetNodeHalfHeight > Math.abs(Math.sin(angle)) * targetNodeHalfWidth) {
+            // Intersects with left or right edge
+            targetX = targetCenterX - Math.sign(Math.cos(angle)) * targetNodeHalfWidth;
+            targetY = targetCenterY - Math.tan(angle) * Math.sign(Math.cos(angle)) * targetNodeHalfWidth;
+        } else {
+            // Intersects with top or bottom edge
+            targetX = targetCenterX - Math.tan(Math.PI/2 - angle) * Math.sign(Math.sin(angle)) * targetNodeHalfHeight;
+            targetY = targetCenterY - Math.sign(Math.sin(angle)) * targetNodeHalfHeight;
+        }
+        
+        // Set line attributes
         connectionLine.setAttribute('x1', sourceX);
         connectionLine.setAttribute('y1', sourceY);
         connectionLine.setAttribute('x2', targetX);
@@ -504,6 +632,9 @@ class DiagramManager {
             nodeEl.appendChild(deleteBtn);
             nodeEl.appendChild(content);
             
+            // Add connection indicators
+            this.addConnectionIndicators(nodeEl);
+            
             this.diagramOverlay.appendChild(nodeEl);
             
             // Initialize dragging
@@ -530,6 +661,137 @@ class DiagramManager {
                 
                 deleteBtn.setAttribute('x', midX);
                 deleteBtn.setAttribute('y', midY);
+            }
+        });
+        
+        // Update connection indicators after connections are drawn
+        this.updateConnectionIndicators();
+    }
+    
+    /**
+     * Add connection indicators to a node
+     * @param {HTMLElement} nodeElement - The node DOM element
+     */
+    addConnectionIndicators(nodeElement) {
+        // Create indicators for each side of the node
+        const sides = ['top', 'right', 'bottom', 'left'];
+        
+        sides.forEach(side => {
+            const indicator = document.createElement('div');
+            indicator.className = `connection-indicator ${side}-indicator`;
+            indicator.setAttribute('data-side', side);
+            nodeElement.appendChild(indicator);
+        });
+    }
+    
+    /**
+     * Update connection indicators based on actual connections
+     */
+    updateConnectionIndicators() {
+        // Reset all indicators first
+        const indicators = document.querySelectorAll('.connection-indicator');
+        indicators.forEach(indicator => {
+            indicator.classList.remove('active');
+            indicator.style.opacity = '0';
+        });
+        
+        // Process each connection to highlight appropriate indicators
+        this.connections.forEach(conn => {
+            const sourceNode = document.getElementById(conn.source);
+            const targetNode = document.getElementById(conn.target);
+            const connectionLine = document.getElementById(conn.id);
+            
+            if (!sourceNode || !targetNode || !connectionLine) return;
+            
+            // Get line coordinates
+            const x1 = parseFloat(connectionLine.getAttribute('x1'));
+            const y1 = parseFloat(connectionLine.getAttribute('y1'));
+            const x2 = parseFloat(connectionLine.getAttribute('x2'));
+            const y2 = parseFloat(connectionLine.getAttribute('y2'));
+            
+            // Determine which side of source node is connected
+            const sourceRect = sourceNode.getBoundingClientRect();
+            const diagramRect = this.diagramOverlay.getBoundingClientRect();
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
+            
+            // Determine which side of target node is connected
+            const targetRect = targetNode.getBoundingClientRect();
+            const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
+            const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
+            
+            // Calculate connection sides
+            let sourceSide, targetSide;
+            
+            // Determine source side
+            const sourceDistanceToRight = Math.abs(x1 - (sourceCenterX + sourceRect.width / 2));
+            const sourceDistanceToLeft = Math.abs(x1 - (sourceCenterX - sourceRect.width / 2));
+            const sourceDistanceToTop = Math.abs(y1 - (sourceCenterY - sourceRect.height / 2));
+            const sourceDistanceToBottom = Math.abs(y1 - (sourceCenterY + sourceRect.height / 2));
+            
+            const sourceMinDistance = Math.min(
+                sourceDistanceToRight, 
+                sourceDistanceToLeft,
+                sourceDistanceToTop,
+                sourceDistanceToBottom
+            );
+            
+            if (sourceMinDistance === sourceDistanceToRight) sourceSide = 'right';
+            else if (sourceMinDistance === sourceDistanceToLeft) sourceSide = 'left';
+            else if (sourceMinDistance === sourceDistanceToTop) sourceSide = 'top';
+            else sourceSide = 'bottom';
+            
+            // Determine target side
+            const targetDistanceToRight = Math.abs(x2 - (targetCenterX + targetRect.width / 2));
+            const targetDistanceToLeft = Math.abs(x2 - (targetCenterX - targetRect.width / 2));
+            const targetDistanceToTop = Math.abs(y2 - (targetCenterY - targetRect.height / 2));
+            const targetDistanceToBottom = Math.abs(y2 - (targetCenterY + targetRect.height / 2));
+            
+            const targetMinDistance = Math.min(
+                targetDistanceToRight, 
+                targetDistanceToLeft,
+                targetDistanceToTop,
+                targetDistanceToBottom
+            );
+            
+            if (targetMinDistance === targetDistanceToRight) targetSide = 'right';
+            else if (targetMinDistance === targetDistanceToLeft) targetSide = 'left';
+            else if (targetMinDistance === targetDistanceToTop) targetSide = 'top';
+            else targetSide = 'bottom';
+            
+            // Activate indicators
+            const sourceIndicator = sourceNode.querySelector(`.${sourceSide}-indicator`);
+            if (sourceIndicator) {
+                sourceIndicator.classList.add('active');
+                
+                // Calculate position along the side to place the glow
+                if (sourceSide === 'right' || sourceSide === 'left') {
+                    // Position vertically
+                    const relativeY = (y1 - (sourceRect.top - diagramRect.top)) / sourceRect.height;
+                    sourceIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
+                } else {
+                    // Position horizontally
+                    const relativeX = (x1 - (sourceRect.left - diagramRect.left)) / sourceRect.width;
+                    sourceIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
+                }
+                sourceIndicator.style.opacity = '1';
+            }
+            
+            const targetIndicator = targetNode.querySelector(`.${targetSide}-indicator`);
+            if (targetIndicator) {
+                targetIndicator.classList.add('active');
+                
+                // Calculate position along the side to place the glow
+                if (targetSide === 'right' || targetSide === 'left') {
+                    // Position vertically
+                    const relativeY = (y2 - (targetRect.top - diagramRect.top)) / targetRect.height;
+                    targetIndicator.style.setProperty('--connection-pos', `${relativeY * 100}%`);
+                } else {
+                    // Position horizontally
+                    const relativeX = (x2 - (targetRect.left - diagramRect.left)) / targetRect.width;
+                    targetIndicator.style.setProperty('--connection-pos', `${relativeX * 100}%`);
+                }
+                targetIndicator.style.opacity = '1';
             }
         });
     }

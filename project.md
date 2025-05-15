@@ -9,5 +9,5 @@
 - clean up code / refactor, done 
 
 
-- add tree diagram feature 
-- switch button to diagram 
+- add tree diagram feature, done 
+
