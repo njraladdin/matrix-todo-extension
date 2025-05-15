@@ -1,15 +1,11 @@
 import WhatsNewModal from './whats-new-modal.js';
 import SettingsModal from './settings-modal.js';
+import TaskManager from './TaskManager.js';
 
 class MatrixTodo {
     constructor() {
-        this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
-        
-        // Clean up any existing empty tasks
-        this.cleanupEmptyTasks();
-        
-        // Load the current task ID from localStorage
-        this.currentTaskId = localStorage.getItem('matrix-current-task') || null;
+        // Initialize TaskManager
+        this.taskManager = new TaskManager();
         
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
@@ -235,7 +231,7 @@ class MatrixTodo {
             existingMenus.forEach(menu => menu.remove());
             
             const taskId = taskItem.dataset.id;
-            const isCurrentTask = taskId === this.currentTaskId;
+            const isCurrentTask = taskId === this.taskManager.currentTaskId;
             
             const menu = document.createElement('div');
             menu.className = 'matrix-context-menu';
@@ -270,12 +266,7 @@ class MatrixTodo {
     }
 
     setCurrentTask(taskId) {
-        if (taskId !== null && !this.tasks.find(task => task.id === taskId)) {
-            taskId = null;
-        }
-        
-        this.currentTaskId = taskId;
-        localStorage.setItem('matrix-current-task', taskId);
+        this.taskManager.setCurrentTask(taskId);
         
         // Keep the smooth animation by toggling classes
         const currentTask = this.taskList.querySelector('.current-task');
@@ -291,54 +282,9 @@ class MatrixTodo {
         }
     }
 
-    formatTime(timestamp) {
-        const ms = Date.now() - new Date(timestamp).getTime();
-        
-        const seconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-        
-        if (days > 0) {
-            return `${days}d`;
-        } else if (hours > 0) {
-            return `${hours}h`;
-        } else {
-            return `${minutes}m`;
-        }
-    }
-
     addTask(text) {
-        let category = 'normal';
-        if (text.includes('!urgent')) {
-            category = 'urgent';
-            text = text.replace('!urgent', '').trim();
-        }
-
-        // Use # for group names instead of @
-        const groupMatch = text.match(/#([\w-]+)/);
-        const group = groupMatch ? groupMatch[1].toUpperCase() : null;
+        const task = this.taskManager.addTask(text);
         
-        // Remove the group tag from the text and trim
-        text = text.replace(/#[\w-]+/, '').trim();
-
-        // If text is empty after removing tags, use [BLANK]
-        if (!text) {
-            text = '[BLANK]';
-        }
-
-        const task = {
-            id: Date.now().toString(),
-            text: text.toUpperCase(),
-            completed: false,
-            category,
-            group,
-            timestamp: new Date().toISOString()
-        };
-
-        this.tasks.unshift(task);
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
-
         this.settingsModal.addToHistory(task);
 
         if (this.isGlobalEnabled) {
@@ -349,104 +295,33 @@ class MatrixTodo {
     }
 
     toggleTask(id) {
-        this.tasks = this.tasks.map(task => {
-            if (task.id === id) {
-                const updatedTask = { ...task, completed: !task.completed };
-                this.sandbox.contentWindow.postMessage({ 
-                    type: "updateTask", 
-                    task: updatedTask 
-                }, "*");
-
-                // If this task is being marked as completed and it's the current task,
-                // automatically unset it as current
-                if (updatedTask.completed && id === this.currentTaskId) {
-                    this.setCurrentTask(null);
-                }
-
-                return updatedTask;
-            }
-            return task;
-        });
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        const updatedTask = this.taskManager.toggleTask(id);
+        
+        if (updatedTask) {
+            this.sandbox.contentWindow.postMessage({ 
+                type: "updateTask", 
+                task: updatedTask 
+            }, "*");
+        }
         
         // Update just the completed state without full re-render
         const taskElement = this.taskList.querySelector(`[data-id="${id}"]`);
         if (taskElement) {
-            const task = this.tasks.find(t => t.id === id);
-            taskElement.classList.toggle('completed', task.completed);
+            taskElement.classList.toggle('completed', updatedTask.completed);
         }
         
         this.updateProgress();
     }
 
     deleteTask(id) {
-        this.tasks = this.tasks.filter(task => task.id !== id);
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        this.taskManager.deleteTask(id);
         this.sandbox.contentWindow.postMessage({ type: "deleteTask", taskId: id }, "*");
         this.render();
     }
 
-    updateProgress() {
-        // Filter out tasks in the 'BACKLOG' group (case-insensitive)
-        const nonBacklogTasks = this.tasks.filter(t => 
-            !t.group || t.group.toUpperCase() !== 'BACKLOG'
-        );
-        
-        console.log('All tasks:', this.tasks.map(t => ({
-            text: t.text,
-            completed: t.completed,
-            group: t.group
-        })));
-        
-        console.log('Non-backlog tasks:', nonBacklogTasks.map(t => ({
-            text: t.text,
-            completed: t.completed,
-            group: t.group
-        })));
-        
-        // Calculate completion based only on non-backlog tasks
-        const totalTasks = nonBacklogTasks.length;
-        const completedTasks = nonBacklogTasks.filter(t => t.completed).length;
-        
-        console.log('Progress calculation (excluding BACKLOG):', {
-            totalTasks,
-            completedTasks,
-            percentage: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0
-        });
-
-        // Calculate percentage based on non-backlog tasks
-        const percentage = totalTasks 
-            ? Math.round((completedTasks / totalTasks) * 100)
-            : 0;
-        
-        // Check if backlog tasks exist
-        const hasBacklogTasks = this.tasks.some(t => t.group && t.group.toUpperCase() === 'BACKLOG');
-        
-        // Add note about BACKLOG tasks being excluded if they exist
-      
-            this.progressText.textContent = `${percentage}% COMPLETE`;
-        
-        
-        const blocks = this.progressBar.children;
-        const filledBlocks = Math.floor(percentage / 10);
-        
-        Array.from(blocks).forEach((block, index) => {
-            if (index < filledBlocks) {
-                block.classList.add('filled');
-            } else {
-                block.classList.remove('filled');
-            }
-        });
-    }
-
     render() {
-        // Group tasks and normalize group names
-        const groupedTasks = this.tasks.reduce((acc, task) => {
-            const group = task.group ? task.group.toUpperCase() : 'UNGROUPED';
-            if (!acc[group]) acc[group] = [];
-            acc[group].push(task);
-            return acc;
-        }, {});
+        // Get grouped tasks from taskManager
+        const groupedTasks = this.taskManager.getGroupedTasks();
 
         // Generate HTML for each group
         const html = Object.entries(groupedTasks)
@@ -460,12 +335,12 @@ class MatrixTodo {
                         </div>
                     ` : ''}
                     ${tasks.map(task => {
-                        const timeDisplay = `<span class="task-time">${this.formatTime(task.timestamp)}</span>`;
+                        const timeDisplay = `<span class="task-time">${this.taskManager.formatTime(task.timestamp)}</span>`;
                         
                         return `
                             <div class="task-item ${task.completed ? 'completed' : ''} 
                                 ${task.category} ${task.group ? 'grouped-task' : ''}
-                                ${task.id === this.currentTaskId ? 'current-task' : ''}" 
+                                ${task.id === this.taskManager.currentTaskId ? 'current-task' : ''}" 
                                 data-id="${task.id}"
                                 draggable="true">
                                 <button class="delete-btn">×</button>
@@ -479,6 +354,23 @@ class MatrixTodo {
 
         this.taskList.innerHTML = html;
         this.updateProgress();
+    }
+
+    updateProgress() {
+        const { percentage, hasBacklogTasks } = this.taskManager.getProgressStats();
+        
+        this.progressText.textContent = `${percentage}% COMPLETE`;
+        
+        const blocks = this.progressBar.children;
+        const filledBlocks = Math.floor(percentage / 10);
+        
+        Array.from(blocks).forEach((block, index) => {
+            if (index < filledBlocks) {
+                block.classList.add('filled');
+            } else {
+                block.classList.remove('filled');
+            }
+        });
     }
 
     updateGhostText() {
@@ -625,33 +517,27 @@ class MatrixTodo {
             return null; // Default to no group (UNGROUPED)
         };
 
-        // Find the task object and update its group
-        const task = this.tasks.find(t => t.id === taskId);
-        if (task) {
-            const newGroup = findGroupHeader(droppedTask);
-            console.log(`Updating task ${task.text} group from ${task.group || 'UNGROUPED'} to ${newGroup || 'UNGROUPED'}`);
-            task.group = newGroup;
-        }
+        // Get the new group for the task
+        const newGroup = findGroupHeader(droppedTask);
         
         // Get the new order of all tasks from the DOM
         const newTaskOrder = Array.from(this.taskList.querySelectorAll('.task-item'))
             .map(item => {
                 const id = item.dataset.id;
-                return this.tasks.find(t => t.id === id);
+                return this.taskManager.tasks.find(t => t.id === id);
             });
         
-        // Update tasks array with new order
-        this.tasks = newTaskOrder;
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        // Update task's group and order using the TaskManager
+        const updatedTask = this.taskManager.updateTaskGroupAndOrder(taskId, newGroup, newTaskOrder);
         
         // Force a re-render to ensure consistent grouping
         this.render();
 
         // Update task in Firebase if enabled
-        if (this.isGlobalEnabled && task) {
+        if (this.isGlobalEnabled && updatedTask) {
             this.sandbox.contentWindow.postMessage({ 
                 type: "updateTask", 
-                task: task 
+                task: updatedTask 
             }, "*");
         }
     }
@@ -991,14 +877,7 @@ class MatrixTodo {
     }
 
     clearCompleted() {
-        // Store the IDs of completed tasks before removing them
-        const completedTaskIds = this.tasks
-            .filter(task => task.completed)
-            .map(task => task.id);
-        
-        // Remove completed tasks from the tasks array
-        this.tasks = this.tasks.filter(task => !task.completed);
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        const completedTaskIds = this.taskManager.clearCompleted();
         
         // Send delete messages for all completed tasks
         completedTaskIds.forEach(taskId => {
@@ -1019,12 +898,8 @@ class MatrixTodo {
 
         const groupPrefix = inputText.slice(hashIndex + 1).toLowerCase();
         
-        // Get existing groups from tasks and normalize them
-        const existingGroups = [...new Set(this.tasks
-            .map(task => task.group)
-            .filter(group => group) // Remove null/undefined
-            .map(group => group.toUpperCase()) // Normalize all groups to uppercase
-        )];
+        // Get existing groups from taskManager
+        const existingGroups = this.taskManager.getExistingGroups();
         
         // Filter groups that match the current input (case-insensitive)
         const matchingGroups = existingGroups
@@ -1108,16 +983,6 @@ class MatrixTodo {
             case 'Escape':
                 this.suggestionsDropdown.style.display = 'none';
                 break;
-        }
-    }
-
-    cleanupEmptyTasks() {
-        const originalLength = this.tasks.length;
-        this.tasks = this.tasks.filter(task => task.text.trim());
-        
-        if (this.tasks.length !== originalLength) {
-            console.log(`Cleaned up ${originalLength - this.tasks.length} empty tasks`);
-            localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
         }
     }
 }
