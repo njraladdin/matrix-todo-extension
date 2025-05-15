@@ -2,17 +2,24 @@ import WhatsNewModal from './whats-new-modal.js';
 import SettingsModal from './settings-modal.js';
 import TaskManager from './task-manager.js';
 import NotesManager from './notes-manager.js';
+import DiagramManager from './diagram-manager.js';
 
 class MatrixTodo {
     constructor() {
         // Initialize Managers
         this.taskManager = new TaskManager();
         this.notesManager = new NotesManager();
+        this.diagramManager = new DiagramManager();
         
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
         this.progressBar = document.querySelector('.progress-bar');
         this.progressText = document.querySelector('.progress-text');
+        this.diagramOverlay = document.querySelector('.diagram-overlay');
+
+        // Make diagram overlay always active but in background
+        this.diagramOverlay.classList.add('active');
+        this.diagramOverlay.classList.add('always-active');
 
         this.initializeProgressBar();
 
@@ -20,15 +27,17 @@ class MatrixTodo {
 
         document.body.addEventListener('click', (e) => {
             const isNoteItem = e.target.closest('.note-item');
+            const isDiagramItem = e.target.closest('.diagram-node');
             const isDeleteBtn = e.target.classList.contains('delete-btn');
             
             console.log('Click detected:', {
                 isNoteItem,
+                isDiagramItem,
                 isDeleteBtn,
                 target: e.target
             });
 
-            if (!isNoteItem && !isDeleteBtn) {
+            if (!isNoteItem && !isDeleteBtn && !isDiagramItem) {
                 this.taskInput.focus();
             }
         });
@@ -107,6 +116,21 @@ class MatrixTodo {
             }
         });
 
+        // Render initial diagram
+        this.diagramManager.renderDiagram();
+        
+        // Add message listener for context menu
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (request.action === "addNote") {
+                this.notesManager.addNote();
+            } else if (request.action === "addDiagramNode") {
+                // Create node at cursor position or center if not available
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                this.diagramManager.createNode(viewportWidth / 2, viewportHeight / 2);
+            }
+        });
+
         // Update the initial placeholder styling with reduced glow
         this.taskInput.style.color = 'var(--matrix-green)';
         this.taskInput.style.textShadow = `
@@ -174,13 +198,6 @@ class MatrixTodo {
         
         // Render notes
         this.notesManager.renderNotes();
-        
-        // Add message listener for context menu
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.action === "addNote") {
-                this.notesManager.addNote();
-            }
-        });
     }
 
     initializeProgressBar() {

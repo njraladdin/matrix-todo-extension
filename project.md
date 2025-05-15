@@ -8,4 +8,6 @@
 - change update manager to whats new modal, done 
 - clean up code / refactor, done 
 
+
+- add tree diagram feature 
 - switch button to diagram 
