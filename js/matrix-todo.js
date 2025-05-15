@@ -1,11 +1,13 @@
 import WhatsNewModal from './whats-new-modal.js';
 import SettingsModal from './settings-modal.js';
 import TaskManager from './TaskManager.js';
+import NotesManager from './NotesManager.js';
 
 class MatrixTodo {
     constructor() {
-        // Initialize TaskManager
+        // Initialize Managers
         this.taskManager = new TaskManager();
+        this.notesManager = new NotesManager();
         
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
@@ -126,18 +128,6 @@ class MatrixTodo {
             }
         });
 
-        // Update notes initialization
-        this.notes = JSON.parse(localStorage.getItem('matrix-notes')) || [];
-        this.notesOverlay = document.querySelector('.notes-overlay');
-        this.renderNotes();
-
-        // Add message listener for context menu
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            if (request.action === "addNote") {
-                this.addNote();
-            }
-        });
-
         // Initialize the What's New system
         this.whatsNewModal = new WhatsNewModal();
         this.whatsNewModal.checkForUpdates();
@@ -181,6 +171,16 @@ class MatrixTodo {
 
         // Add keyboard navigation for suggestions
         this.taskInput.addEventListener('keydown', this.handleSuggestionNavigation.bind(this));
+        
+        // Render notes
+        this.notesManager.renderNotes();
+        
+        // Add message listener for context menu
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            if (request.action === "addNote") {
+                this.notesManager.addNote();
+            }
+        });
     }
 
     initializeProgressBar() {
@@ -666,214 +666,6 @@ class MatrixTodo {
                 this.todoPositions.delete(id);
             }
         }
-    }
-
-    addNote() {
-        // Calculate center position for new note
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const noteWidth = 400; // Width defined in CSS
-        const noteHeight = 200; // Approximate default height
-        
-        const note = {
-            id: Date.now().toString(),
-            content: '',
-            timestamp: new Date().toISOString(),
-            position: {
-                x: (viewportWidth - noteWidth) / 2,
-                y: (viewportHeight - noteHeight) / 2
-            }
-        };
-        
-        this.notes.unshift(note);
-        this.saveNotes();
-        this.renderNotes();
-        
-        // Focus the newly added note
-        const firstTextarea = this.notesOverlay.querySelector('textarea');
-        if (firstTextarea) {
-            firstTextarea.focus();
-        }
-    }
-
-    initializeDragging(noteElement) {
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
-
-        const dragStart = (e) => {
-            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
-            
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-
-            if (e.target === noteElement || e.target.parentNode === noteElement) {
-                isDragging = true;
-            }
-        };
-
-        const dragEnd = () => {
-            if (!isDragging) return;
-            
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-
-            // Save the final position
-            const noteId = noteElement.dataset.id;
-            const note = this.notes.find(n => n.id === noteId);
-            if (note) {
-                note.position = { x: xOffset, y: yOffset };
-                this.saveNotes();
-            }
-        };
-
-        const drag = (e) => {
-            if (!isDragging) return;
-            
-            e.preventDefault();
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-            xOffset = currentX;
-            yOffset = currentY;
-
-            setTranslate(currentX, currentY, noteElement);
-        };
-
-        const setTranslate = (xPos, yPos, el) => {
-            // Get viewport dimensions
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            // Get note dimensions
-            const noteRect = el.getBoundingClientRect();
-            const noteWidth = noteRect.width;
-            const noteHeight = noteRect.height;
-            
-            // Constrain position within viewport bounds
-            xPos = Math.max(0, Math.min(xPos, viewportWidth - noteWidth));
-            yPos = Math.max(0, Math.min(yPos, viewportHeight - noteHeight));
-            
-            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
-        };
-
-        // Set initial position
-        const noteId = noteElement.dataset.id;
-        const note = this.notes.find(n => n.id === noteId);
-        if (note && note.position) {
-            xOffset = note.position.x;
-            yOffset = note.position.y;
-            setTranslate(xOffset, yOffset, noteElement);
-        }
-
-        noteElement.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', dragEnd);
-    }
-
-    renderNotes() {
-        console.log('🎨 Starting renderNotes');
-        console.log('Current notes:', this.notes);
-        
-        if (!this.notesOverlay) {
-            console.error('❌ Notes overlay element not found!');
-            return;
-        }
-        
-        // Modify the note HTML structure slightly
-        const html = this.notes.map(note => {
-            const position = note.position || { x: 0, y: 0 };
-            console.log('📝 Rendering note:', { id: note.id, position });
-            return `
-                <div class="note-item" 
-                    data-id="${note.id}" 
-                    style="visibility: visible; transform: translate(${position.x}px, ${position.y}px);">
-                    <div class="note-header">
-                        <button class="delete-note">×</button>
-                    </div>
-                    <textarea placeholder="ENTER NOTE">${note.content || ''}</textarea>
-                    <div class="note-drag-handle"></div>
-                </div>
-            `;
-        }).join('');
-        
-        console.log('Generated HTML:', html);
-        this.notesOverlay.innerHTML = html;
-
-        // Initialize dragging for each note
-        const noteElements = this.notesOverlay.querySelectorAll('.note-item');
-        console.log('Found note elements:', noteElements.length);
-
-        noteElements.forEach(noteEl => {
-            this.initializeDragging(noteEl);
-            
-            // Make sure note is visible and within bounds
-            const noteId = noteEl.dataset.id;
-            const note = this.notes.find(n => n.id === noteId);
-            if (note && note.position) {
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-                const noteRect = noteEl.getBoundingClientRect();
-                
-                note.position.x = Math.max(0, Math.min(note.position.x, viewportWidth - noteRect.width));
-                note.position.y = Math.max(0, Math.min(note.position.y, viewportHeight - noteRect.height));
-                
-                noteEl.style.transform = `translate(${note.position.x}px, ${note.position.y}px)`;
-            }
-            
-            noteEl.style.visibility = 'visible';
-        });
-
-        // Add event listeners for textareas
-        this.notesOverlay.querySelectorAll('textarea').forEach(textarea => {
-            // Add this function to automatically adjust height
-            const adjustHeight = (el) => {
-                el.style.height = 'auto';
-                el.style.height = el.scrollHeight + 'px';
-            };
-
-            // Initial height adjustment
-            adjustHeight(textarea);
-
-            textarea.addEventListener('input', (e) => {
-                const noteId = e.target.closest('.note-item').dataset.id;
-                const note = this.notes.find(n => n.id === noteId);
-                if (note) {
-                    note.content = e.target.value;
-                    this.saveNotes();
-                    // Adjust height on input
-                    adjustHeight(e.target);
-                }
-            });
-
-            // Prevent task input focus when clicking textarea
-            textarea.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        });
-
-        // Add event listeners for delete buttons
-        this.notesOverlay.querySelectorAll('.delete-note').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const noteId = e.target.closest('.note-item').dataset.id;
-                this.deleteNote(noteId);
-            });
-        });
-    }
-
-    deleteNote(id) {
-        this.notes = this.notes.filter(note => note.id !== id);
-        this.saveNotes();
-        this.renderNotes();
-    }
-
-    saveNotes() {
-        localStorage.setItem('matrix-notes', JSON.stringify(this.notes));
     }
 
     clearCompleted() {
