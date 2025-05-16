@@ -1742,3 +1742,361 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     pointer-events: auto;
     transition: opacity 0.2s ease;
 }
+
+/* Document styles */
+.documents-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.document-item {
+    position: absolute;
+    background: rgba(var(--matrix-green-rgb), 0.015);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    padding: 0;
+    width: 380px;
+    min-height: 45px;
+    pointer-events: auto;
+    cursor: default;
+    will-change: transform; 
+    box-shadow: 
+        0 0 20px rgba(0, 0, 0, 0.2),
+        inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05),
+        0 0 2px rgba(var(--matrix-green-rgb), 0.03);
+    transition: 
+        box-shadow 0.25s ease, 
+        width 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+        min-height 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.25s ease;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    backface-visibility: hidden;
+}
+
+/* Fix dragging visual feedback */
+.document-item[data-dragging="true"] {
+    box-shadow: 
+        0 0 30px rgba(var(--matrix-green-rgb), 0.15),
+        0 0 20px rgba(0, 0, 0, 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
+}
+
+.document-item:hover {
+    box-shadow: 
+        0 0 20px rgba(0, 0, 0, 0.3),
+        inset 0 0 1px rgba(var(--matrix-green-rgb), 0.1),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.06);
+}
+
+.document-item.expanded {
+    width: 800px; /* Increased from 700px */
+    min-height: 600px; /* Increased from 400px */
+    background: rgba(0, 0, 0, 0.85); /* Darker, more opaque background when expanded */
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+    z-index: 51; /* Ensure expanded documents appear above others */
+}
+
+.document-item.collapsed {
+    min-height: 45px;
+}
+
+.document-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    cursor: move;
+    user-select: none;
+    border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    opacity: 0.8;
+    position: relative;
+    transition: border-bottom 0.35s ease;
+}
+
+/* Container for title and DOC tag */
+.title-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 70%; /* Prevent it from overlapping with buttons */
+}
+
+.document-item.expanded .document-header {
+    border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.2);
+}
+
+.document-title {
+    background: transparent;
+    border: none;
+    color: var(--matrix-green);
+    font-family: monospace;
+    font-size: 16px;
+    flex: 1; /* Take up available space in the container */
+    outline: none;
+    cursor: text;
+    opacity: 0.8;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.3),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    transition: opacity 0.35s ease, text-shadow 0.35s ease;
+    margin-left: 0;
+    padding: 4px 6px; /* Add padding for better text visibility */
+}
+
+/* Remove the highlighting/focus style */
+.document-title:focus {
+    background: transparent;
+    outline: none;
+    border-bottom: none;
+}
+
+.document-item.expanded .document-title {
+    opacity: 0.9;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.5),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.3);
+}
+
+/* Document type indicator (DOC tag) */
+.document-type-indicator {
+    background: rgba(var(--matrix-green-rgb), 0.15);
+    color: var(--matrix-green);
+    padding: 0 4px;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+    opacity: 0.7;
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.3);
+}
+
+/* Remove conflicting hover styles */
+.document-item:hover .document-type-indicator {
+    /* No special hover effect */
+}
+
+/* Remove animations and before content */
+@keyframes pulse {
+    /* Empty - removing animation */
+}
+
+.document-header-buttons {
+    display: flex;
+    gap: 12px; /* Increased gap between buttons */
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+.document-item:hover .document-header-buttons {
+    opacity: 0.6;
+}
+
+.document-header-buttons button {
+    background: none;
+    border: none;
+    color: var(--matrix-green);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px; /* Larger hit area for buttons */
+    transition: all 0.2s ease;
+}
+
+/* Delete button styling - make it clearly distinct */
+.delete-document {
+    color: var(--matrix-green);
+    transition: all 0.3s ease;
+}
+
+.delete-document:hover {
+    color: rgba(255, 100, 100, 0.8) !important; /* Reddish color on hover for warning */
+    text-shadow: 
+        0 0 3px rgba(255, 50, 50, 0.4),
+        0 0 6px rgba(255, 50, 50, 0.2) !important;
+}
+
+/* Add styles for drag handle button - use consistent styling with 3 dots */
+.drag-document {
+    cursor: grab;
+    letter-spacing: 2px; /* Spacing between dots */
+    font-size: 14px; /* Make the dots a better size */
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+}
+
+.drag-document:active {
+    cursor: grabbing;
+}
+
+.document-header-buttons button:hover {
+    opacity: 1;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.9),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.7);
+}
+
+/* Collapsed click area for expanding documents */
+.collapsed-click-area {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 24px; /* Taller clickable area */
+    cursor: pointer;
+    z-index: 5;
+    background: transparent;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+/* Arrow indicator for expanding */
+.expand-indicator {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: var(--matrix-green);
+    opacity: 0.8;
+}
+
+.document-item.collapsed:hover .collapsed-click-area {
+    opacity: 1;
+}
+
+.document-item.collapsed .collapsed-click-area {
+    display: block;
+}
+
+/* Minimize button */
+.minimize-document {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    color: var(--matrix-green);
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.4;
+    z-index: 52;
+    padding: 8px 20px; /* Much larger clickable area */
+    transition: opacity 0.2s ease;
+}
+
+.minimize-document:hover {
+    opacity: 0.9;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.9),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.7);
+}
+
+/* Only show minimize button on expanded documents */
+.document-item.collapsed .minimize-document {
+    display: none;
+}
+
+/* Fix content height issues */
+.document-content {
+    padding: 16px 24px 30px 16px; /* Increased padding */
+    max-height: 80vh;  /* Increased height but limit to viewport */
+    overflow-y: auto;   /* Enable vertical scrolling */
+    opacity: 0;
+    transition: opacity 0.25s ease, max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    height: calc(100% - 45px); /* Full height minus header */
+    max-height: 0;
+    -webkit-font-smoothing: antialiased; /* Improve text rendering */
+    -moz-osx-font-smoothing: grayscale; /* Improve text rendering */
+}
+
+.document-item.expanded .document-content {
+    display: block;
+    animation: expandContentFade 0.25s forwards;
+    backface-visibility: hidden; /* Prevent blurry text during animation */
+    transform-style: preserve-3d; /* Better 3D handling */
+    will-change: opacity; /* Optimize for animation */
+    opacity: 1;
+    max-height: 550px; /* Increased from 500px */
+}
+
+.document-item.collapsed .document-content {
+    animation: collapseContentFade 0.15s forwards;
+    backface-visibility: hidden;
+    will-change: opacity;
+}
+
+@keyframes expandContentFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes collapseContentFade {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Fix textarea rendering and scrolling issues */
+.document-content textarea {
+    width: 100%;
+    height: calc(100% - 10px);
+    min-height: 300px;
+    background: transparent;
+    border: none;
+    color: var(--matrix-green);
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    cursor: text;
+    opacity: 0.85;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.3),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    padding-bottom: 25px;
+    padding-right: 15px; /* Increased right padding for better scrollbar spacing */
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased; /* Improve text rendering */
+    -moz-osx-font-smoothing: grayscale; /* Improve text rendering */
+}
+
+/* Fix scrollbar appearance for better visibility */
+.document-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.document-content::-webkit-scrollbar-track {
+    background: rgba(var(--matrix-green-rgb), 0.1);
+}
+
+.document-content::-webkit-scrollbar-thumb {
+    background: rgba(var(--matrix-green-rgb), 0.3);
+    border-radius: 3px;
+}
+
+.document-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--matrix-green-rgb), 0.5);
+}
+
+/* Slightly bolder title in collapsed state but still elegant */
+.document-item.collapsed .document-title {
+    opacity: 0.9;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+}

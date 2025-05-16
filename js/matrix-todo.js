@@ -3,6 +3,7 @@ import SettingsModal from './settings-modal.js';
 import TaskManager from './task-manager.js';
 import NotesManager from './notes-manager.js';
 import DiagramManager from './diagram-manager.js';
+import DocumentManager from './document-manager.js';
 
 class MatrixTodo {
     constructor() {
@@ -10,6 +11,7 @@ class MatrixTodo {
         this.taskManager = new TaskManager();
         this.notesManager = new NotesManager();
         this.diagramManager = new DiagramManager();
+        this.documentManager = new DocumentManager();
         
         this.taskInput = document.querySelector('.task-input');
         this.taskList = document.querySelector('.task-list');
@@ -28,16 +30,18 @@ class MatrixTodo {
         document.body.addEventListener('click', (e) => {
             const isNoteItem = e.target.closest('.note-item');
             const isDiagramItem = e.target.closest('.diagram-node');
+            const isDocumentItem = e.target.closest('.document-item');
             const isDeleteBtn = e.target.classList.contains('delete-btn');
             
             console.log('Click detected:', {
                 isNoteItem,
                 isDiagramItem,
+                isDocumentItem,
                 isDeleteBtn,
                 target: e.target
             });
 
-            if (!isNoteItem && !isDeleteBtn && !isDiagramItem) {
+            if (!isNoteItem && !isDeleteBtn && !isDiagramItem && !isDocumentItem) {
                 this.taskInput.focus();
             }
         });
@@ -190,6 +194,9 @@ class MatrixTodo {
 
         // Initialize extension messaging
         this.initializeExtensionMessaging();
+
+        // Render initial document state
+        this.documentManager.renderDocuments();
     }
 
     initializeProgressBar() {
@@ -788,10 +795,9 @@ class MatrixTodo {
     }
 
     bindPageContextMenu() {
-        // Add context menu to the entire document (except when on task or node items)
-        document.addEventListener('contextmenu', (e) => {
-            // Don't show our custom menu if right-clicking on a task item or diagram node
-            // as they have their own context menus
+        // Listen for right-click on the page to show custom context menu
+        document.body.addEventListener('contextmenu', (e) => {
+            // Skip if right-clicking on a task item or diagram node
             const taskItem = e.target.closest('.task-item');
             const diagramNode = e.target.closest('.diagram-node');
             
@@ -808,6 +814,7 @@ class MatrixTodo {
             menu.className = 'matrix-context-menu';
             menu.innerHTML = `
                 <div class="menu-item" data-action="add-note">ADD NOTE</div>
+                <div class="menu-item" data-action="add-document">ADD DOCUMENT</div>
                 <div class="menu-item" data-action="add-diagram-node">ADD DIAGRAM NODE</div>
                 <div class="menu-item" data-action="add-dashed-node">ADD DASHED NODE</div>
             `;
@@ -837,11 +844,15 @@ class MatrixTodo {
             
             // Add event listeners for menu items
             menu.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
                     const action = item.getAttribute('data-action');
                     
                     if (action === 'add-note') {
                         this.notesManager.addNote();
+                    } else if (action === 'add-document') {
+                        this.documentManager.addDocument();
                     } else if (action === 'add-diagram-node') {
                         this.diagramManager.createNode(position.x, position.y);
                     } else if (action === 'add-dashed-node') {
@@ -868,12 +879,14 @@ class MatrixTodo {
     // Handle messages from Chrome extension
     initializeExtensionMessaging() {
         // Set up Chrome extension message listener
-        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+        try {
             chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.log("Received message from extension:", message);
                 
                 if (message.action === "addNote") {
                     this.notesManager.addNote();
+                } else if (message.action === "addDocument") {
+                    this.documentManager.addDocument();
                 } else if (message.action === "addDiagramNode") {
                     // Create a regular node in the center of the screen
                     const centerX = window.innerWidth / 2;
@@ -886,9 +899,11 @@ class MatrixTodo {
                     this.diagramManager.createNode(centerX, centerY, true);
                 }
                 
-                sendResponse({ success: true });
+                // Make sure to free up the event listener by returning false if not using sendResponse
                 return true; // Required for async response
             });
+        } catch (e) {
+            console.error("Failed to set up Chrome extension messaging:", e);
         }
     }
 }

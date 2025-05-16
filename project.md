@@ -15,8 +15,12 @@
 - ability to add dashed blocks, done 
 
 - fix dragging in diagram nodes, done 
-- more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
+
 
 - add ability to add text files (to store ideas.txt) long text
+
+- more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
+
+
 
 - connect to userrr account to backuo
