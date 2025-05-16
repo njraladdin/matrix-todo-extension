@@ -187,6 +187,9 @@ class MatrixTodo {
         
         // Render notes
         this.notesManager.renderNotes();
+
+        // Initialize extension messaging
+        this.initializeExtensionMessaging();
     }
 
     initializeProgressBar() {
@@ -806,6 +809,7 @@ class MatrixTodo {
             menu.innerHTML = `
                 <div class="menu-item" data-action="add-note">ADD NOTE</div>
                 <div class="menu-item" data-action="add-diagram-node">ADD DIAGRAM NODE</div>
+                <div class="menu-item" data-action="add-dashed-node">ADD DASHED NODE</div>
             `;
             
             // First append menu to get its dimensions
@@ -840,6 +844,8 @@ class MatrixTodo {
                         this.notesManager.addNote();
                     } else if (action === 'add-diagram-node') {
                         this.diagramManager.createNode(position.x, position.y);
+                    } else if (action === 'add-dashed-node') {
+                        this.diagramManager.createNode(position.x, position.y, true);
                     }
                     
                     document.body.removeChild(menu);
@@ -857,6 +863,33 @@ class MatrixTodo {
             };
             document.addEventListener('click', closeMenu);
         });
+    }
+
+    // Handle messages from Chrome extension
+    initializeExtensionMessaging() {
+        // Set up Chrome extension message listener
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                console.log("Received message from extension:", message);
+                
+                if (message.action === "addNote") {
+                    this.notesManager.addNote();
+                } else if (message.action === "addDiagramNode") {
+                    // Create a regular node in the center of the screen
+                    const centerX = window.innerWidth / 2;
+                    const centerY = window.innerHeight / 2;
+                    this.diagramManager.createNode(centerX, centerY);
+                } else if (message.action === "addDashedNode") {
+                    // Create a dashed node in the center of the screen
+                    const centerX = window.innerWidth / 2;
+                    const centerY = window.innerHeight / 2;
+                    this.diagramManager.createNode(centerX, centerY, true);
+                }
+                
+                sendResponse({ success: true });
+                return true; // Required for async response
+            });
+        }
     }
 }
 

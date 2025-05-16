@@ -1284,6 +1284,19 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     margin-top: 18px;
 }
 
+/* Dashed node style */
+.diagram-node.dashed {
+    border: 1px dashed rgba(var(--matrix-green-rgb), 0.3);
+    background: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+}
+
+.diagram-node.dashed:hover {
+    border: 1px dashed rgba(var(--matrix-green-rgb), 0.5);
+    box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
+}
+
 /* Node header for dragging - create an invisible drag area at the top */
 .diagram-node::before {
     content: "";
@@ -1455,12 +1468,21 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 .diagram-connection {
     stroke: var(--matrix-green);
     stroke-width: 1.5px;
-    stroke-dasharray: 5, 8;
-    animation: connectionFlow 240s linear infinite;
     opacity: 0.6;
     filter: drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.3));
     transition: stroke-width 0.2s ease, opacity 0.2s ease;
     pointer-events: auto; /* Make sure it's clickable */
+}
+
+/* Solid connection style - overwrites the default dashed style */
+.diagram-connection.solid-connection {
+    stroke-dasharray: none; /* No dash for solid lines */
+}
+
+/* Dashed connection style */
+.diagram-connection.dashed-connection {
+    stroke-dasharray: 5, 8; /* Dashed pattern */
+    animation: connectionFlow 240s linear infinite;
 }
 
 .diagram-connection:hover {
@@ -1472,9 +1494,18 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 .diagram-connection.temp-connection {
     stroke: var(--matrix-green);
     stroke-width: 1.5px;
-    stroke-dasharray: 5, 8;
     opacity: 0.8;
     filter: drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 0.4));
+}
+
+/* Make temp connection use correct dash style based on node type */
+.diagram-connection.temp-connection.solid-connection {
+    stroke-dasharray: none;
+}
+
+.diagram-connection.temp-connection.dashed-connection {
+    stroke-dasharray: 5, 8;
+    animation: connectionFlow 240s linear infinite;
 }
 
 /* Wider invisible hit area for better hover detection */

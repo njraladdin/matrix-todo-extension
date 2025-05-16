@@ -151,8 +151,12 @@ class DiagramManager {
     
     /**
      * Create a new node at specified position
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {boolean} isDashed - Whether this is a dashed node
+     * @returns {Object} The created node object
      */
-    createNode(x, y) {
+    createNode(x, y, isDashed = false) {
         // Calculate position relative to the container
         const rect = this.diagramOverlay.getBoundingClientRect();
         const relX = x - rect.left;
@@ -164,7 +168,8 @@ class DiagramManager {
             position: {
                 x: relX,
                 y: relY
-            }
+            },
+            isDashed: isDashed
         };
         
         this.nodes.push(node);
@@ -200,6 +205,11 @@ class DiagramManager {
         const nodeEl = document.createElement('div');
         nodeEl.id = node.id;
         nodeEl.className = 'diagram-node';
+        
+        // Apply dashed class if needed
+        if (node.isDashed) {
+            nodeEl.classList.add('dashed');
+        }
         
         // Set explicit position style
         nodeEl.style.position = 'absolute';
@@ -467,6 +477,17 @@ class DiagramManager {
         line.classList.add('diagram-connection');
         line.style.cursor = 'pointer'; // Add pointer cursor to indicate clickability
         
+        // Check if either source or target node is dashed
+        const sourceNode = this.nodes.find(n => n.id === conn.source);
+        const targetNode = this.nodes.find(n => n.id === conn.target);
+        
+        // Apply appropriate connection style
+        if ((sourceNode && sourceNode.isDashed) || (targetNode && targetNode.isDashed)) {
+            line.classList.add('dashed-connection');
+        } else {
+            line.classList.add('solid-connection');
+        }
+        
         // Add delete button for the connection
         const deleteBtn = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         deleteBtn.textContent = '×'; // Simple X character
@@ -678,6 +699,16 @@ class DiagramManager {
         line.setAttribute('x2', x2);
         line.setAttribute('y2', y2);
         line.classList.add('diagram-connection', 'temp-connection');
+        
+        // Check if source node is dashed to set appropriate style
+        if (this.connectionDrag.sourceNode) {
+            const sourceNode = this.nodes.find(n => n.id === this.connectionDrag.sourceNode);
+            if (sourceNode && sourceNode.isDashed) {
+                line.classList.add('dashed-connection');
+            } else {
+                line.classList.add('solid-connection');
+            }
+        }
         
         svg.appendChild(line);
     }

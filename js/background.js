@@ -10,6 +10,12 @@ chrome.runtime.onInstalled.addListener(() => {
         title: "Add Diagram Node",
         contexts: ["page"]
     });
+    
+    chrome.contextMenus.create({
+        id: "addDashedNode",
+        title: "Add Dashed Node",
+        contexts: ["page"]
+    });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -19,6 +25,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             visible: isNewTab
         });
         chrome.contextMenus.update("addDiagramNode", {
+            visible: isNewTab
+        });
+        chrome.contextMenus.update("addDashedNode", {
             visible: isNewTab
         });
     }
@@ -33,6 +42,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     chrome.contextMenus.update("addDiagramNode", {
         visible: isNewTab
     });
+    chrome.contextMenus.update("addDashedNode", {
+        visible: isNewTab
+    });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -40,5 +52,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         chrome.tabs.sendMessage(tab.id, { action: "addNote" });
     } else if (info.menuItemId === "addDiagramNode") {
         chrome.tabs.sendMessage(tab.id, { action: "addDiagramNode" });
+    } else if (info.menuItemId === "addDashedNode") {
+        chrome.tabs.sendMessage(tab.id, { action: "addDashedNode" });
     }
 }); 
