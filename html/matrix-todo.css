@@ -1270,7 +1270,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     min-height: 70px;
     max-width: 300px;
     pointer-events: auto;
-    cursor: move; /* Move cursor only for the node container */
+    cursor: move;
     will-change: transform;
     z-index: 12;
     box-shadow: 
@@ -1297,23 +1297,23 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
         inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
 }
 
-/* Node header for dragging - create an invisible drag area at the top */
-.diagram-node::before {
+/* Remove the old drag area since we now have a dedicated drag handle */
+/* .diagram-node::before {
     content: "";
     position: absolute;
     top: 0;
     left: 0;
-    right: 30px; /* Leave space for delete button */
-    height: 24px; /* Height of drag area */
+    right: 30px;
+    height: 24px;
     cursor: move;
     z-index: 1;
-}
+} */
 
 .node-content {
     color: var(--matrix-green);
     font-family: monospace;
     font-size: 14px;
-    padding: 10px;
+    padding: 10px 10px 14px 10px; /* Extra padding at bottom to avoid overlap with drag handle */
     outline: none;
     flex: 1;
     text-shadow: 
@@ -1349,6 +1349,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     animation: subtleNodePulse 6s infinite;
 }
 
+/* Delete button styling */
 .delete-node-btn {
     position: absolute;
     top: 5px;
@@ -1366,6 +1367,41 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 .delete-node-btn:hover {
     opacity: 0.6;
+}
+
+/* Style for note-style drag handle in diagram nodes */
+.diagram-node .note-drag-handle {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    cursor: grab;
+    opacity: 0.25; /* More subtle by default */
+    z-index: 15;
+}
+
+/* Dots style for drag handle */
+.diagram-node .note-drag-handle::after {
+    content: "···";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: var(--matrix-green);
+    cursor: move;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+}
+
+.diagram-node:hover .note-drag-handle {
+    opacity: 0.7; /* More visible on hover but still subtle */
+}
+
+.diagram-node .note-drag-handle:active {
+    cursor: grabbing;
 }
 
 .connection-handle {
@@ -1513,18 +1549,6 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     stroke: transparent;
     stroke-width: 10px;
     pointer-events: stroke;
-}
-
-/* Simple style for connection delete button */
-.delete-connection-btn {
-    font-size: 24px;
-    fill: var(--matrix-green);
-    cursor: pointer;
-    opacity: 0; /* Hidden by default - controlled via JS */
-    text-anchor: middle;
-    dominant-baseline: middle;
-    pointer-events: auto;
-    transition: opacity 0.2s ease;
 }
 
 /* Add styles for floating tags */
@@ -1705,4 +1729,16 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
            drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.9)) 
            drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
     opacity: 1 !important;
+}
+
+/* Restore the delete-connection-btn style that was mistakenly removed */
+.delete-connection-btn {
+    font-size: 24px;
+    fill: var(--matrix-green);
+    cursor: pointer;
+    opacity: 0; /* Hidden by default - controlled via JS */
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
 }

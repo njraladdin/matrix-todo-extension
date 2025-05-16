@@ -217,6 +217,11 @@ class DiagramManager {
         nodeEl.style.left = `${node.position.x}px`;
         nodeEl.style.top = `${node.position.y}px`;
         
+        // Create note-style drag handle at the bottom-right like in notes-manager.js
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'note-drag-handle';
+        dragHandle.setAttribute('title', 'Drag to move');
+        
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-node-btn';
         deleteBtn.textContent = '×';
@@ -268,6 +273,7 @@ class DiagramManager {
         nodeEl.appendChild(tagsContainer);
         nodeEl.appendChild(deleteBtn);
         nodeEl.appendChild(content);
+        nodeEl.appendChild(dragHandle);
         
         // Add connection indicators
         this.addConnectionIndicators(nodeEl);
@@ -828,11 +834,22 @@ class DiagramManager {
                 this.updateNodeContent(nodeElement.id, e.target.innerHTML);
                 this.updateNodeTags(nodeElement.id);
             });
+            
+            // Add explicit mousedown handler to the content to stop propagation
+            content.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); // Prevent node dragging when interacting with content
+            });
         }
         
+        // Get drag handle and setup drag handling
+        const dragHandle = nodeElement.querySelector('.note-drag-handle');
+        
+        // Main node mousedown handler - allow dragging from borders or handle
         nodeElement.addEventListener('mousedown', (e) => {
             // Skip if clicking on content (for editing), delete button, or connection handle
+            // Check if the click target is or is contained within the node-content
             if (e.target.classList.contains('node-content') || 
+                e.target.closest('.node-content') ||
                 e.target.classList.contains('delete-node-btn') ||
                 e.target.closest('.delete-node-btn') ||  // Also check for child elements of delete button
                 e.target.classList.contains('connection-handle')) {

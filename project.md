@@ -14,5 +14,9 @@
 - add some sort of tags to a diagram node , will be used to list tehcnologies used for that project, done 
 - ability to add dashed blocks, done 
 
-
+- fix dragging in diagram nodes, done 
 - more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
+
+- add ability to add text files (to store ideas.txt) long text
+
+- connect to userrr account to backuo
