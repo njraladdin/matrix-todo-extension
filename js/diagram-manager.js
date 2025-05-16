@@ -99,7 +99,8 @@ class DiagramManager {
             position: {
                 x: node.position.x,
                 y: node.position.y
-            }
+            },
+            isDashed: node.isDashed // Include isDashed property to persist node style
         }));
         
         const cleanConnections = this.connections.map(conn => ({

@@ -12,7 +12,7 @@
 - add tree diagram feature, done 
 - abiltiy to add line breaks in diagram blocks, done 
 - add some sort of tags to a diagram node , will be used to list tehcnologies used for that project, done 
+- ability to add dashed blocks, done 
 
 
-- ability to add dashed blocks 
 - more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
