@@ -6,14 +6,26 @@ class DocumentManager {
 
     /**
      * Adds a new document
+     * @param {number} x - Optional X coordinate for the document
+     * @param {number} y - Optional Y coordinate for the document
      * @returns {object} The newly created document
      */
-    addDocument() {
-        // Calculate center position for new document
+    addDocument(x, y) {
+        // Calculate position for new document
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const docWidth = 500; // Width defined in CSS
         const docHeight = 250; // Approximate default height
+        
+        // Use provided coordinates if available, otherwise center the document
+        // Note: x and y are already page coordinates (including scroll position)
+        // from the context menu handler, so we don't need to adjust them further
+        const posX = x !== undefined ? x - (docWidth / 2) : (viewportWidth - docWidth) / 2;
+        
+        // For Y position, if coordinates are provided, use them directly
+        // Otherwise, center in the current viewport (accounting for scroll)
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const posY = y !== undefined ? y - (docHeight / 2) : scrollY + (viewportHeight - docHeight) / 2;
         
         const document = {
             id: Date.now().toString(),
@@ -21,8 +33,8 @@ class DocumentManager {
             content: '',
             timestamp: new Date().toISOString(),
             position: {
-                x: (viewportWidth - docWidth) / 2,
-                y: (viewportHeight - docHeight) / 2
+                x: posX,
+                y: posY
             },
             isExpanded: true // Start expanded by default
         };
@@ -171,6 +183,9 @@ class DocumentManager {
             return;
         }
         
+        // Save current scroll position to restore it after rendering
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
         // Generate HTML for all documents
         const html = this.documents.map(doc => {
             const position = doc.position || { x: 0, y: 0 };
@@ -215,13 +230,12 @@ class DocumentManager {
             const doc = this.documents.find(d => d.id === docId);
             if (doc && doc.position) {
                 const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
                 const docWidth = doc.isExpanded ? 800 : 380; // Width based on state - INCREASED WIDTH
-                const docHeight = doc.isExpanded ? 600 : 45; // Height based on state - INCREASED HEIGHT
                 
-                // Keep document within viewport bounds to prevent them getting lost off-screen
+                // Keep document within viewport bounds horizontally, but allow vertical freedom
                 doc.position.x = Math.max(0, Math.min(doc.position.x, viewportWidth - Math.min(docWidth, 200)));
-                doc.position.y = Math.max(0, Math.min(doc.position.y, viewportHeight - Math.min(docHeight, 40)));
+                
+                // No vertical constraints - allow documents to be placed anywhere in the scrollable area
                 
                 docEl.style.transform = `translate(${doc.position.x}px, ${doc.position.y}px)`;
             }
@@ -234,6 +248,9 @@ class DocumentManager {
         });
 
         this.setupEventListeners();
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
     }
 
     /**
@@ -485,18 +502,17 @@ class DocumentManager {
         const setTranslate = (xPos, yPos, el) => {
             // Get viewport dimensions
             const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
             
             // Get document dimensions
             const docRect = el.getBoundingClientRect();
             const docWidth = docRect.width;
-            const docHeight = docRect.height;
             
-            // Constrain position to keep at least part of document visible
+            // Constrain position horizontally only, allow vertical scrolling
             // Allow 80% of the document to go off-screen to enable easy retrieval
             const minVisible = 40; // Minimum visible pixels
             xPos = Math.max(-docWidth + minVisible, Math.min(xPos, viewportWidth - minVisible));
-            yPos = Math.max(-docHeight + minVisible, Math.min(yPos, viewportHeight - minVisible));
+            
+            // No vertical constraints - allow documents to be placed anywhere in the scrollable area
             
             el.style.transform = `translate(${xPos}px, ${yPos}px)`;
         };

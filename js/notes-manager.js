@@ -6,22 +6,34 @@ class NotesManager {
 
     /**
      * Adds a new note
+     * @param {number} x - Optional X coordinate for the note
+     * @param {number} y - Optional Y coordinate for the note
      * @returns {object} The newly created note
      */
-    addNote() {
-        // Calculate center position for new note
+    addNote(x, y) {
+        // Calculate position for new note
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const noteWidth = 400; // Width defined in CSS
         const noteHeight = 200; // Approximate default height
+        
+        // Use provided coordinates if available, otherwise center the note
+        // Note: x and y are already page coordinates (including scroll position)
+        // from the context menu handler, so we don't need to adjust them further
+        const posX = x !== undefined ? x - (noteWidth / 2) : (viewportWidth - noteWidth) / 2;
+        
+        // For Y position, if coordinates are provided, use them directly
+        // Otherwise, center in the current viewport (accounting for scroll)
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const posY = y !== undefined ? y - (noteHeight / 2) : scrollY + (viewportHeight - noteHeight) / 2;
         
         const note = {
             id: Date.now().toString(),
             content: '',
             timestamp: new Date().toISOString(),
             position: {
-                x: (viewportWidth - noteWidth) / 2,
-                y: (viewportHeight - noteHeight) / 2
+                x: posX,
+                y: posY
             }
         };
         
@@ -88,6 +100,9 @@ class NotesManager {
             return;
         }
         
+        // Save current scroll position to restore it after rendering
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
         // Generate HTML for all notes
         const html = this.notes.map(note => {
             const position = note.position || { x: 0, y: 0 };
@@ -120,11 +135,12 @@ class NotesManager {
             const note = this.notes.find(n => n.id === noteId);
             if (note && note.position) {
                 const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
                 const noteRect = noteEl.getBoundingClientRect();
                 
+                // Only constrain horizontally, allow vertical freedom
                 note.position.x = Math.max(0, Math.min(note.position.x, viewportWidth - noteRect.width));
-                note.position.y = Math.max(0, Math.min(note.position.y, viewportHeight - noteRect.height));
+                
+                // No vertical constraints - allow notes to be placed anywhere in the scrollable area
                 
                 noteEl.style.transform = `translate(${note.position.x}px, ${note.position.y}px)`;
             }
@@ -133,6 +149,9 @@ class NotesManager {
         });
 
         this.setupEventListeners();
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
     }
 
     /**
@@ -224,16 +243,15 @@ class NotesManager {
         const setTranslate = (xPos, yPos, el) => {
             // Get viewport dimensions
             const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
             
             // Get note dimensions
             const noteRect = el.getBoundingClientRect();
             const noteWidth = noteRect.width;
-            const noteHeight = noteRect.height;
             
-            // Constrain position within viewport bounds
+            // Constrain position horizontally only, allow vertical scrolling
             xPos = Math.max(0, Math.min(xPos, viewportWidth - noteWidth));
-            yPos = Math.max(0, Math.min(yPos, viewportHeight - noteHeight));
+            
+            // No vertical constraints - allow notes to be placed anywhere in the scrollable area
             
             el.style.transform = `translate(${xPos}px, ${yPos}px)`;
         };

@@ -20,10 +20,11 @@
 - add ability to add text files (to store ideas.txt) long text, done 
 - simplfy document : increase collapsed document width. add expxnading and minimizing button to header instead, done 
 
+- more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
+
 
 - problem: document goes out of screen oif expanded when it was around the corner: autoamtically push it ? or imeplemnt unlimtied space like figma 
 
-- more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
 
 
 

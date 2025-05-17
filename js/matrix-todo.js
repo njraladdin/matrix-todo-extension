@@ -32,6 +32,7 @@ class MatrixTodo {
             const isDiagramItem = e.target.closest('.diagram-node');
             const isDocumentItem = e.target.closest('.document-item');
             const isDeleteBtn = e.target.classList.contains('delete-btn');
+            const isContextMenu = e.target.closest('.matrix-context-menu');
             
             console.log('Click detected:', {
                 isNoteItem,
@@ -41,7 +42,15 @@ class MatrixTodo {
                 target: e.target
             });
 
-            if (!isNoteItem && !isDeleteBtn && !isDiagramItem && !isDocumentItem) {
+            // Only focus the task input if we're near the top of the page
+            // or explicitly clicking on the task input area
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            const isNearTop = scrollY < 100; // Only focus if we're near the top
+            const isTaskInputArea = e.target.closest('.input-wrapper') || e.target.closest('.task-list');
+            
+            if (!isNoteItem && !isDeleteBtn && !isDiagramItem && !isDocumentItem && 
+                !isContextMenu && (isNearTop || isTaskInputArea)) {
+                // Only focus and scroll if user is near the top or clicking on task-related elements
                 this.taskInput.focus();
             }
         });
@@ -257,8 +266,13 @@ class MatrixTodo {
                 </div>
             `;
             
-            menu.style.left = `${e.clientX}px`;
-            menu.style.top = `${e.clientY}px`;
+            // Get scroll position
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // Add scroll position to client coordinates
+            menu.style.left = `${e.clientX + scrollX}px`;
+            menu.style.top = `${e.clientY + scrollY}px`;
             
             document.body.appendChild(menu);
             
@@ -826,21 +840,28 @@ class MatrixTodo {
             const { clientX, clientY } = e;
             const { innerWidth, innerHeight } = window;
             const { offsetWidth, offsetHeight } = menu;
+            const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop;
             
             // Position the menu (ensure it doesn't go off screen)
+            // Add scroll position to convert client coordinates to page coordinates
             const menuX = clientX + offsetWidth > innerWidth 
-                ? innerWidth - offsetWidth - 10 // 10px margin from right edge
-                : clientX;
+                ? innerWidth - offsetWidth - 10 + scrollX // 10px margin from right edge
+                : clientX + scrollX;
                 
             const menuY = clientY + offsetHeight > innerHeight 
-                ? innerHeight - offsetHeight - 10 // 10px margin from bottom edge
-                : clientY;
+                ? innerHeight - offsetHeight - 10 + scrollY // 10px margin from bottom edge
+                : clientY + scrollY;
             
             menu.style.left = `${menuX}px`;
             menu.style.top = `${menuY}px`;
             
             // Capture the position for creating elements later
-            const position = { x: clientX, y: clientY };
+            // Use page coordinates (including scroll) for creating elements
+            const position = { 
+                x: clientX + scrollX, 
+                y: clientY + scrollY 
+            };
             
             // Add event listeners for menu items
             menu.querySelectorAll('.menu-item').forEach(item => {
@@ -850,9 +871,9 @@ class MatrixTodo {
                     const action = item.getAttribute('data-action');
                     
                     if (action === 'add-note') {
-                        this.notesManager.addNote();
+                        this.notesManager.addNote(position.x, position.y);
                     } else if (action === 'add-document') {
-                        this.documentManager.addDocument();
+                        this.documentManager.addDocument(position.x, position.y);
                     } else if (action === 'add-diagram-node') {
                         this.diagramManager.createNode(position.x, position.y);
                     } else if (action === 'add-dashed-node') {
@@ -884,8 +905,10 @@ class MatrixTodo {
                 console.log("Received message from extension:", message);
                 
                 if (message.action === "addNote") {
+                    // Create note in the center of the screen when triggered from extension
                     this.notesManager.addNote();
                 } else if (message.action === "addDocument") {
+                    // Create document in the center of the screen when triggered from extension
                     this.documentManager.addDocument();
                 } else if (message.action === "addDiagramNode") {
                     // Create a regular node in the center of the screen

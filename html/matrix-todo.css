@@ -13,7 +13,7 @@
 body {
     background-color: black;
     color: var(--matrix-green);
-    min-height: 100vh;
+    min-height: 10000px; /* Very large minimum height for infinite scrolling */
     /* More subtle vintage effect with multiple layers */
     text-shadow: 
         0 0 2px rgba(var(--matrix-green-rgb), 0.6),
@@ -21,24 +21,32 @@ body {
         0 0 6px rgba(var(--matrix-green-rgb), 0.2);
     animation: flicker 5s infinite;
     /* Custom scrollbar for the entire page */
-    overflow-y: overlay;  /* Makes scrollbar overlay content */
+    overflow-y: auto;  /* Changed from overlay to auto for better compatibility */
+    /* Hide scrollbars but keep scrolling functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* Custom scrollbar for the entire page */
+/* Hide WebKit scrollbar */
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Custom scrollbar for the entire page - hidden but keeping the structure */
 ::-webkit-scrollbar {
-    width: 4px;
+    width: 0; /* Hide scrollbar but keep functionality */
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(var(--matrix-green-rgb), 0.1);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(var(--matrix-green-rgb), 0.3);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--matrix-green-rgb), 0.5);
+    background: transparent;
 }
 
 .container {
@@ -185,7 +193,7 @@ body {
 
 /* Keyboard shortcut hint */
 .shortcut-hint {
-    position: fixed;
+    position: absolute;
     bottom: 20px;
     right: 20px;
     font-size: 10px;
@@ -268,11 +276,11 @@ body {
 }
 
 .global-todos {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 10000px; /* Match body's min-height */
     z-index: -1;
     pointer-events: none;
 }
@@ -327,7 +335,7 @@ body {
 }
 
 .global-toggle {
-    position: fixed;
+    position: absolute;
     bottom: 50px;
     right: 20px;
     display: flex;
@@ -393,7 +401,7 @@ input:checked + .slider:before {
 /* Optional: Add a subtle scan line effect */
 body::after {
     content: "";
-    position: fixed;
+    position: fixed; /* Keep this fixed */
     top: 0;
     left: 0;
     width: 100%;
@@ -444,7 +452,7 @@ body::after {
 /* Add a subtle color distortion effect */
 body::before {
     content: "";
-    position: fixed;
+    position: fixed; /* Keep this fixed */
     top: 0;
     left: 0;
     width: 100%;
@@ -462,17 +470,17 @@ body::before {
 }
 
 .notes-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 10000px; /* Match body's min-height */
     pointer-events: none;
     z-index: 10;
 }
 
 .note-item {
-    position: fixed;
+    position: absolute;
     background: rgba(var(--matrix-green-rgb), 0.015);
     border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
     padding: 16px;
@@ -556,7 +564,7 @@ body::before {
 
 .updates-popup {
     display: none;
-    position: fixed;
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -783,7 +791,7 @@ body::before {
 
 .settings-modal {
     display: none;
-    position: fixed;
+    position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -907,21 +915,27 @@ body::before {
     font-size: 10px;
 }
 
-/* Add custom scrollbar for history */
+/* Add custom scrollbar for history - hidden but functional */
 .history-container::-webkit-scrollbar {
-    width: 4px;
+    width: 0;
+    display: none;
 }
 
 .history-container::-webkit-scrollbar-track {
-    background: rgba(var(--matrix-green-rgb), 0.1);
+    background: transparent;
 }
 
 .history-container::-webkit-scrollbar-thumb {
-    background: rgba(var(--matrix-green-rgb), 0.3);
+    background: transparent;
 }
 
 .history-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--matrix-green-rgb), 0.5);
+    background: transparent;
+}
+
+.history-container {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
 
 .group-suggestions {
@@ -1017,7 +1031,7 @@ opacity: 1;
 
 /* Context menu styles */
 .matrix-context-menu {
-    position: fixed;
+    position: absolute;
     background: rgba(0, 0, 0, 0.85);
     border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
     padding: 2px;
@@ -1227,11 +1241,11 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 /* Diagram styles */
 .diagram-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 10000px; /* Match body's min-height */
     pointer-events: none;
     z-index: 9; /* Below notes but above other elements */
     display: none; /* Hidden by default */
@@ -1745,11 +1759,11 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 /* Document styles */
 .documents-overlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 10000px; /* Match body's min-height */
     pointer-events: none;
     z-index: 50;
 }
@@ -2076,22 +2090,27 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     }
 }
 
-/* Fix scrollbar appearance for better visibility */
+/* Fix scrollbar appearance for document content - hidden but functional */
 .document-content::-webkit-scrollbar {
-    width: 6px;
+    width: 0;
+    display: none;
 }
 
 .document-content::-webkit-scrollbar-track {
-    background: rgba(var(--matrix-green-rgb), 0.1);
+    background: transparent;
 }
 
 .document-content::-webkit-scrollbar-thumb {
-    background: rgba(var(--matrix-green-rgb), 0.3);
-    border-radius: 3px;
+    background: transparent;
 }
 
 .document-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--matrix-green-rgb), 0.5);
+    background: transparent;
+}
+
+.document-content {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
 
 /* Slightly bolder title in collapsed state but still elegant */
@@ -2103,4 +2122,91 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 .document-content textarea:focus {
     outline: none !important;
     box-shadow: none !important;
+}
+
+/* Notification */
+.notification {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+/* Modal */
+.modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+/* Context menu */
+.context-menu {
+    position: absolute;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 5px 0;
+    min-width: 150px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    transform: scale(0.95);
+    transform-origin: top left;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    background-color: #1a1a1a;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+/* Scrollbar for updates content - hidden but functional */
+.updates-content::-webkit-scrollbar {
+    width: 0;
+    display: none;
+}
+
+.updates-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.updates-content::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.updates-content::-webkit-scrollbar-thumb:hover {
+    background: transparent;
+}
+
+.updates-content {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }

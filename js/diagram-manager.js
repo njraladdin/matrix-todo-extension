@@ -159,9 +159,15 @@ class DiagramManager {
      */
     createNode(x, y, isDashed = false) {
         // Calculate position relative to the container
+        // Note: x and y are already page coordinates (including scroll position)
+        // from the context menu handler, so we need to adjust them for the overlay
         const rect = this.diagramOverlay.getBoundingClientRect();
-        const relX = x - rect.left;
-        const relY = y - rect.top;
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Adjust coordinates to be relative to the diagram overlay accounting for scroll
+        const relX = x - rect.left - scrollX;
+        const relY = y - rect.top - scrollY;
         
         const node = {
             id: `node-${this.nextNodeId++}`,
@@ -918,12 +924,12 @@ class DiagramManager {
             return;
         }
         
-        // Constrain to diagram area
+        // Constrain horizontally to diagram area, but allow vertical freedom
         const nodeWidth = nodeEl.offsetWidth;
-        const nodeHeight = nodeEl.offsetHeight;
         
         const constrainedX = Math.max(0, Math.min(x, rect.width - nodeWidth));
-        const constrainedY = Math.max(0, Math.min(y, rect.height - nodeHeight));
+        // No vertical constraints - allow nodes to be placed anywhere in the scrollable area
+        const constrainedY = y;
         
         this.dragState.xOffset = constrainedX;
         this.dragState.yOffset = constrainedY;
@@ -1018,6 +1024,9 @@ class DiagramManager {
         // Only render if overlay exists
         if (!this.diagramOverlay) return;
         
+        // Save current scroll position to restore it after rendering
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
         // Get or create SVG container for connections
         const connectionsContainer = this.getConnectionsContainer();
         
@@ -1048,6 +1057,9 @@ class DiagramManager {
                 this.renderSingleConnection(conn);
             }
         });
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
     }
     
     /**
