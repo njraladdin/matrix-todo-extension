@@ -183,11 +183,13 @@ class DocumentManager {
                     style="visibility: hidden; transform: translate(${position.x}px, ${position.y}px); z-index: ${doc.isExpanded ? 52 : 51};">
                     <div class="document-header">
                         <div class="title-container">
-                            <span class="document-type-indicator">doc</span>
+                            <div class="doc-drag-col">
+                                <span class="document-type-indicator">DOC</span>
+                                <button class="drag-document" title="Drag">···</button>
+                            </div>
                             <input type="text" class="document-title" value="${doc.title || 'UNTITLED DOCUMENT'}" placeholder="TITLE">
                         </div>
                         <div class="document-header-buttons">
-                            <button class="drag-document" title="Drag">···</button>
                             <button class="delete-document" title="Delete">×</button>
                         </div>
                     </div>

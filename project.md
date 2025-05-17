@@ -17,10 +17,12 @@
 - fix dragging in diagram nodes, done 
 
 
-- add ability to add text files (to store ideas.txt) long text
+- add ability to add text files (to store ideas.txt) long text, done 
+- simplfy document : increase collapsed document width. add expxnading and minimizing button to header instead 
+
 
 - more space, maybe abiltiy to add next page so have more space for diagram ? or maybe allow scrolling, or allow dragging like figma 
 
 
 
-- connect to userrr account to backuo
+- connect to userrr account to backup documents 
