@@ -1759,8 +1759,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     background: rgba(var(--matrix-green-rgb), 0.015);
     border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
     padding: 0;
-    width: 500px;
-    min-height: 45px;
+    width: 380px;
+    min-height: 32px;
     pointer-events: auto;
     cursor: default;
     will-change: transform; 
@@ -1795,29 +1795,38 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 }
 
 .document-item.expanded {
-    width: 800px; /* Increased from 700px */
-    height: 600px; /* Use fixed height for expanded documents */
-    background: rgba(0, 0, 0, 0.95); /* Less transparent when expanded */
-    border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
-    z-index: 51; /* Ensure expanded documents appear above others */
+    width: 800px;
+    height: 500px;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.95);
 }
 
 .document-item.collapsed {
-    min-height: 45px;
-    width: 500px;
+    min-height: 32px;
+    width: 320px;
+}
+
+.document-item.collapsed .document-header {
+    padding-bottom: 18px;
+}
+
+.document-item.collapsed .collapsed-click-area {
+    padding-top: 2px;
 }
 
 .document-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
+    padding: 4px 8px;
     cursor: move;
     user-select: none;
-    border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    /* border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.1); */
+    border-bottom: none;
     opacity: 0.8;
     position: relative;
     transition: border-bottom 0.35s ease;
+    gap: 4px;
 }
 
 /* Container for title and DOC tag */
@@ -1825,8 +1834,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
-    width: 70%;
+    gap: 4px;
+    width: 60%;
 }
 
 .doc-drag-col {
@@ -1837,7 +1846,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 }
 
 .document-item.expanded .document-header {
-    border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.2);
+    /* border-bottom: 1px solid rgba(var(--matrix-green-rgb), 0.2); */
+    border-bottom: none;
 }
 
 .document-title {
@@ -1845,7 +1855,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     border: none;
     color: var(--matrix-green);
     font-family: monospace;
-    font-size: 22px;
+    font-size: 15px;
     flex: 1;
     outline: none;
     cursor: text;
@@ -1853,7 +1863,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.3), 0 0 4px rgba(var(--matrix-green-rgb), 0.2);
     transition: opacity 0.35s ease, text-shadow 0.35s ease;
     margin-left: 0;
-    padding: 4px 6px;
+    padding: 2px 4px;
     text-transform: uppercase;
 }
 
@@ -1866,19 +1876,17 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 .document-item.expanded .document-title {
     opacity: 0.9;
-    text-shadow: 
-        0 0 2px rgba(var(--matrix-green-rgb), 0.5),
-        0 0 4px rgba(var(--matrix-green-rgb), 0.3);
+    text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.5), 0 0 4px rgba(var(--matrix-green-rgb), 0.3);
 }
 
 /* Document type indicator (DOC tag) */
 .document-type-indicator {
     background: rgba(var(--matrix-green-rgb), 0.08);
     color: var(--matrix-green);
-    padding: 0 4px;
-    font-size: 9px;
+    padding: 0 2px;
+    font-size: 8px;
     letter-spacing: 0.5px;
-    margin-right: 6px;
+    margin-right: 2px;
     opacity: 0.5;
     border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
     margin-bottom: 0;
@@ -1896,7 +1904,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 .document-header-buttons {
     display: flex;
-    gap: 12px; /* Increased gap between buttons */
+    gap: 4px;
     opacity: 0.3;
     transition: opacity 0.3s;
 }
@@ -1910,8 +1918,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     border: none;
     color: var(--matrix-green);
     cursor: pointer;
-    font-size: 18px;
-    padding: 4px 8px; /* Larger hit area for buttons */
+    font-size: 14px;
+    padding: 2px 4px;
     transition: all 0.2s ease;
 }
 
@@ -1932,11 +1940,11 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 .drag-document {
     cursor: grab;
     letter-spacing: 2px;
-    font-size: 10px;
+    font-size: 9px;
     margin-left: 0;
     margin-top: 1px;
     margin-bottom: 0;
-    padding: 0 2px;
+    padding: 0 1px;
     align-self: flex-start;
     background: none;
     border: none;
@@ -1962,7 +1970,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 24px; /* Taller clickable area */
+    height: 16px;
     cursor: pointer;
     z-index: 5;
     background: transparent;
@@ -1999,12 +2007,12 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     border: none;
     color: var(--matrix-green);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     opacity: 0.4;
     z-index: 52;
-    padding: 16px 32px; /* Much larger clickable area */
-    min-width: 48px;
-    min-height: 32px;
+    padding: 6px 12px;
+    min-width: 24px;
+    min-height: 16px;
     transition: opacity 0.2s ease;
 }
 
@@ -2022,7 +2030,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 
 /* Fix content height issues */
 .document-content {
-    padding: 4px 24px 30px 16px;
+    padding: 2px 8px 10px 8px;
     max-height: 80vh;
     overflow-y: auto;
     opacity: 0;
@@ -2030,6 +2038,9 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     height: calc(100% - 45px);
     min-height: unset;
     position: static;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .document-item.expanded .document-content {
@@ -2049,11 +2060,12 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     flex: 1 1 auto;
     height: 100%;
     min-height: 0;
+    font-size: 13px;
 }
 
 .document-item.collapsed {
-    min-height: 45px;
-    width: 500px;
+    min-height: 32px;
+    width: 320px;
 }
 
 .document-item.collapsed .document-content {
@@ -2077,12 +2089,12 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 .document-content textarea {
     width: 100%;
     height: calc(100% - 10px);
-    min-height: 300px;
+    min-height: 80px;
     background: transparent;
     border: none;
     color: var(--matrix-green);
     font-family: monospace;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.5;
     resize: none;
     outline: none;
@@ -2091,8 +2103,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     text-shadow: 
         0 0 2px rgba(var(--matrix-green-rgb), 0.3),
         0 0 4px rgba(var(--matrix-green-rgb), 0.2);
-    padding-bottom: 25px;
-    padding-right: 15px; /* Increased right padding for better scrollbar spacing */
+    padding-bottom: 8px;
+    padding-right: 6px;
     box-sizing: border-box;
     -webkit-font-smoothing: antialiased; /* Improve text rendering */
     -moz-osx-font-smoothing: grayscale; /* Improve text rendering */
@@ -2119,7 +2131,5 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 /* Slightly bolder title in collapsed state but still elegant */
 .document-item.collapsed .document-title {
     opacity: 0.9;
-    text-shadow: 
-        0 0 2px rgba(var(--matrix-green-rgb), 0.6),
-        0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+    text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.6), 0 0 4px rgba(var(--matrix-green-rgb), 0.4);
 }
