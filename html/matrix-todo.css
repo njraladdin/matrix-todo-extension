@@ -3,6 +3,33 @@
     --matrix-green-rgb: 0, 255, 65;  /* RGB values for the same color */
 }
 
+/* Global scrollbar styling - Matrix theme (very subtle) */
+::-webkit-scrollbar {
+    width: 4px; /* Even thinner width for maximum subtlety */
+    display: block;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3); /* Nearly invisible track */
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 30, 10, 0.5); /* Dark green-black, not bright green */
+    border-radius: 2px; /* Smaller radius for subtlety */
+}
+
+/* Remove hover style completely */
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 30, 10, 0.5); /* Same as non-hover state */
+    box-shadow: none;
+}
+
+/* Firefox scrollbar styling */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 30, 10, 0.5) rgba(0, 0, 0, 0.3); /* Match WebKit colors */
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -22,32 +49,9 @@ body {
     animation: flicker 5s infinite;
     /* Custom scrollbar for the entire page */
     overflow-y: auto;  /* Changed from overlay to auto for better compatibility */
-    /* Hide scrollbars but keep scrolling functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* Hide WebKit scrollbar */
-body::-webkit-scrollbar {
-    display: none;
-}
 
-/* Custom scrollbar for the entire page - hidden but keeping the structure */
-::-webkit-scrollbar {
-    width: 0; /* Hide scrollbar but keep functionality */
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: transparent;
-}
 
 .container {
     padding: 2.5rem;
@@ -193,13 +197,19 @@ body::-webkit-scrollbar {
 
 /* Keyboard shortcut hint */
 .shortcut-hint {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    font-size: 10px;
-    opacity: 0.5;
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
     display: flex;
     align-items: center;
+    font-size: 10px;
+    opacity: 0.5;
+    z-index: 1000;
+    transition: opacity 0.3s;
+}
+
+.shortcut-hint:hover {
+    opacity: 1;
 }
 
 .attribution {
@@ -564,7 +574,7 @@ body::before {
 
 .updates-popup {
     display: none;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -705,22 +715,6 @@ body::before {
     margin-right: -15px;
 }
 
-/* Scrollbar for updates content */
-.updates-content::-webkit-scrollbar {
-    width: 4px;
-}
-
-.updates-content::-webkit-scrollbar-track {
-    background: rgba(var(--matrix-green-rgb), 0.1);
-}
-
-.updates-content::-webkit-scrollbar-thumb {
-    background: rgba(var(--matrix-green-rgb), 0.3);
-}
-
-.updates-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--matrix-green-rgb), 0.5);
-}
 
 .group-header {
     color: var(--matrix-green);
@@ -791,7 +785,7 @@ body::before {
 
 .settings-modal {
     display: none;
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -915,28 +909,9 @@ body::before {
     font-size: 10px;
 }
 
-/* Add custom scrollbar for history - hidden but functional */
-.history-container::-webkit-scrollbar {
-    width: 0;
-    display: none;
-}
+/* Add custom scrollbar for history - now visible with Matrix styling */
 
-.history-container::-webkit-scrollbar-track {
-    background: transparent;
-}
 
-.history-container::-webkit-scrollbar-thumb {
-    background: transparent;
-}
-
-.history-container::-webkit-scrollbar-thumb:hover {
-    background: transparent;
-}
-
-.history-container {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-}
 
 .group-suggestions {
     display: none;
@@ -2090,28 +2065,6 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     }
 }
 
-/* Fix scrollbar appearance for document content - hidden but functional */
-.document-content::-webkit-scrollbar {
-    width: 0;
-    display: none;
-}
-
-.document-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.document-content::-webkit-scrollbar-thumb {
-    background: transparent;
-}
-
-.document-content::-webkit-scrollbar-thumb:hover {
-    background: transparent;
-}
-
-.document-content {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-}
 
 /* Slightly bolder title in collapsed state but still elegant */
 .document-item.collapsed .document-title {
@@ -2123,7 +2076,6 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     outline: none !important;
     box-shadow: none !important;
 }
-
 /* Notification */
 .notification {
     position: absolute;
@@ -2188,25 +2140,3 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     white-space: nowrap;
 }
 
-/* Scrollbar for updates content - hidden but functional */
-.updates-content::-webkit-scrollbar {
-    width: 0;
-    display: none;
-}
-
-.updates-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.updates-content::-webkit-scrollbar-thumb {
-    background: transparent;
-}
-
-.updates-content::-webkit-scrollbar-thumb:hover {
-    background: transparent;
-}
-
-.updates-content {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-}
