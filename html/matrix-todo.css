@@ -6,11 +6,13 @@
 /* Global scrollbar styling - Matrix theme (very subtle) */
 ::-webkit-scrollbar {
     width: 4px; /* Even thinner width for maximum subtlety */
+    height: 0; /* Hide horizontal scrollbar */
     display: block;
 }
 
 ::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3); /* Nearly invisible track */
+    cursor: pointer;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -24,11 +26,6 @@
     box-shadow: none;
 }
 
-/* Firefox scrollbar styling */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 30, 10, 0.5) rgba(0, 0, 0, 0.3); /* Match WebKit colors */
-}
 
 * {
     margin: 0;
@@ -49,6 +46,7 @@ body {
     animation: flicker 5s infinite;
     /* Custom scrollbar for the entire page */
     overflow-y: auto;  /* Changed from overlay to auto for better compatibility */
+    overflow-x: hidden; /* Hide horizontal scrollbar */
 }
 
 
@@ -1747,7 +1745,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     position: absolute;
     background: rgba(var(--matrix-green-rgb), 0.015);
     border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
-    padding: 8px 0 12px 0;
+    padding: 8px 4px 12px 4px;
     width: 440px;
     min-height: 56px;
     pointer-events: auto;
@@ -1785,8 +1783,8 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
 }
 
 .document-item.expanded {
-    width: 800px;
-    height: 500px;
+    width: 1000px;
+    height: 600px;
     background: rgba(0, 0, 0, 0.95);
     /* padding: 0; */
 }
@@ -1998,6 +1996,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     padding: 8px 12px 12px 12px;
     max-height: 80vh;
     overflow-y: auto;
+    overflow-x: hidden; /* Hide horizontal scrollbar */
     opacity: 0;
     transition: opacity 0.25s ease, max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     height: calc(100% - 45px);
@@ -2036,6 +2035,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     color: var(--matrix-green);
     cursor: text;
     opacity: 0.85;
+    resize: none; /* Disable textarea resize handle */
     text-shadow: 
         0 0 2px rgba(var(--matrix-green-rgb), 0.3),
         0 0 4px rgba(var(--matrix-green-rgb), 0.2);

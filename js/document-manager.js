@@ -2,6 +2,8 @@ class DocumentManager {
     constructor() {
         this.documents = JSON.parse(localStorage.getItem('matrix-documents')) || [];
         this.documentsOverlay = document.querySelector('.documents-overlay');
+        // Store original positions for documents that are repositioned when expanded
+        this.originalPositions = {};
     }
 
     /**
@@ -103,16 +105,77 @@ class DocumentManager {
     toggleDocumentExpansion(id) {
         const doc = this.documents.find(d => d.id === id);
         if (doc) {
+            // Toggle expanded state
             doc.isExpanded = !doc.isExpanded;
-            this.saveDocuments();
             
             // Update just this document's UI instead of re-rendering all
             const docElement = document.getElementById(`document-${id}`);
             if (docElement) {
                 if (doc.isExpanded) {
+                    // Store original position before repositioning
+                    if (!this.originalPositions[id]) {
+                        this.originalPositions[id] = { 
+                            x: doc.position.x, 
+                            y: doc.position.y 
+                        };
+                    }
+                    
+                    // Calculate if document will fit in viewport when expanded
+                    const expandedWidth = 1000; // Width when expanded
+                    const expandedHeight = 600; // Height when expanded
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+                    
+                    // Calculate safe position that ensures document stays within viewport
+                    let safeX = doc.position.x;
+                    let safeY = doc.position.y;
+                    
+                    // Ensure at least 20px margin from viewport edges
+                    const margin = 20;
+                    
+                    // Check if document would go off the right edge
+                    if (safeX + expandedWidth > viewportWidth + scrollX - margin) {
+                        safeX = Math.max(margin + scrollX, viewportWidth + scrollX - expandedWidth - margin);
+                    }
+                    
+                    // Check if document would go off the left edge
+                    if (safeX < margin + scrollX) {
+                        safeX = margin + scrollX;
+                    }
+                    
+                    // Check if document would go off the bottom edge
+                    // We want to ensure the header is always visible
+                    const headerHeight = 50; // Approximate header height
+                    if (safeY + expandedHeight > viewportHeight + scrollY - margin) {
+                        safeY = Math.max(margin + scrollY, viewportHeight + scrollY - expandedHeight - margin);
+                    }
+                    
+                    // Check if document would go off the top edge
+                    if (safeY < margin + scrollY) {
+                        safeY = margin + scrollY;
+                    }
+                    
                     // First add class to start animation
                     docElement.classList.remove('collapsed');
                     docElement.classList.add('expanded');
+                    
+                    // Update position if needed with smooth transition
+                    if (safeX !== doc.position.x || safeY !== doc.position.y) {
+                        // Add transition for smooth repositioning
+                        docElement.style.transition = 'transform 0.3s ease, width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-height 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+                        
+                        // Update the document position
+                        doc.position.x = safeX;
+                        doc.position.y = safeY;
+                        docElement.style.transform = `translate(${safeX}px, ${safeY}px)`;
+                        
+                        // Remove transition after animation completes
+                        setTimeout(() => {
+                            docElement.style.transition = '';
+                        }, 300);
+                    }
                     
                     // The content element will transition smoothly due to CSS
                     const contentEl = docElement.querySelector('.document-content');
@@ -137,10 +200,38 @@ class DocumentManager {
                     docElement.classList.remove('expanded');
                     docElement.classList.add('collapsed');
                     
+                    // Check if we should restore the original position
+                    if (this.originalPositions[id]) {
+                        // Get the original position
+                        const originalPos = this.originalPositions[id];
+                        
+                        // Add transition for smooth repositioning back
+                        docElement.style.transition = 'transform 0.3s ease, width 0.25s cubic-bezier(0.25, 1, 0.5, 1), min-height 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+                        
+                        // Wait for collapse animation to start before repositioning
+                        setTimeout(() => {
+                            // Update the document position to original position
+                            doc.position.x = originalPos.x;
+                            doc.position.y = originalPos.y;
+                            docElement.style.transform = `translate(${originalPos.x}px, ${originalPos.y}px)`;
+                            
+                            // Remove transition after animation completes
+                            setTimeout(() => {
+                                docElement.style.transition = '';
+                            }, 300);
+                        }, 50);
+                        
+                        // Clear the stored original position
+                        delete this.originalPositions[id];
+                    }
+                    
                     // The content will collapse smoothly due to CSS transitions
                     docElement.style.zIndex = 51; // Reset to normal z-index
                 }
             }
+            
+            // Save the document state
+            this.saveDocuments();
         }
     }
 
@@ -404,6 +495,7 @@ class DocumentManager {
         let dragStartTime = 0;
         let hasMoved = false;
         let lastClickTime = 0; // To detect double clicks
+        let wasDraggingExpanded = false; // Track if we were dragging an expanded document
 
         const dragStart = (e) => {
             // Don't start drag if clicking on form elements or certain buttons
@@ -420,10 +512,25 @@ class DocumentManager {
             }
             lastClickTime = now;
             
+            // Get the document ID and current position
+            const docId = documentElement.dataset.id;
+            const doc = this.documents.find(d => d.id === docId);
+            if (!doc) return;
+            
+            // Clear any transitions to prevent interference with dragging
+            documentElement.style.transition = '';
+            
+            // Use the current actual position from the document object
+            xOffset = doc.position.x;
+            yOffset = doc.position.y;
+            
             initialX = e.clientX - xOffset;
             initialY = e.clientY - yOffset;
             dragStartTime = Date.now();
             hasMoved = false;
+            
+            // Track if we're dragging an expanded document
+            wasDraggingExpanded = documentElement.classList.contains('expanded');
 
             // Allow dragging via header or specifically via the drag handle
             const isHeader = e.target.classList.contains('document-header') || 
@@ -466,6 +573,28 @@ class DocumentManager {
             // Save the final position
             const docId = documentElement.dataset.id;
             this.updateDocumentPosition(docId, { x: xOffset, y: yOffset });
+            
+            // If this was an expanded document being dragged, update the stored position
+            // in originalPositions to prevent it from jumping back on collapse
+            if (wasDraggingExpanded) {
+                const doc = this.documents.find(d => d.id === docId);
+                if (doc && doc.isExpanded) {
+                    // If we have an original position stored, update it if we've moved significantly
+                    if (this.originalPositions[docId]) {
+                        const distanceMoved = Math.sqrt(
+                            Math.pow(xOffset - this.originalPositions[docId].x, 2) + 
+                            Math.pow(yOffset - this.originalPositions[docId].y, 2)
+                        );
+                        
+                        // If moved significantly, don't restore position on collapse
+                        // Using a more generous threshold to allow for small adjustments
+                        const significantMovementThreshold = 1500; // Increased from 100 to 250
+                        if (distanceMoved > significantMovementThreshold) {
+                            delete this.originalPositions[docId];
+                        }
+                    }
+                }
+            }
             
             // Reset z-index to normal level based on expanded state
             const isExpanded = documentElement.classList.contains('expanded');
