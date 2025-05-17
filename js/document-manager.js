@@ -184,7 +184,6 @@ class DocumentManager {
                     <div class="document-header">
                         <div class="title-container">
                             <div class="doc-drag-col">
-                                <span class="document-type-indicator">DOC</span>
                                 <button class="drag-document" title="Drag">···</button>
                             </div>
                             <input type="text" class="document-title" value="${doc.title || 'UNTITLED DOCUMENT'}" placeholder="TITLE">
