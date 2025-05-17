@@ -1999,7 +1999,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     overflow-x: hidden; /* Hide horizontal scrollbar */
     opacity: 0;
     transition: opacity 0.25s ease, max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    height: calc(100% - 45px);
+    height: 90%;
     min-height: unset;
     position: static;
     scroll-behavior: smooth;
@@ -2014,7 +2014,7 @@ animation: textPulse 5s infinite;  /* Slower 3s animation */
     flex-direction: column;
     padding: 0;
     max-height: none;
-    height: 100%;
+    height: 85%;
     min-height: 0;
     position: relative;
     opacity: 1;
