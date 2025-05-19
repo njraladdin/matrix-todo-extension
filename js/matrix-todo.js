@@ -283,6 +283,71 @@ class MatrixTodo {
         this.closeAuthModal = () => {
             this.authModal.classList.remove('active');
         };
+
+        // Track last saved timestamp per key
+        this.lastCloudSaveTimestamps = {};
+        // Listen for dataSaved and userData messages from sandbox
+        window.addEventListener('message', (event) => {
+            if (!event.data) return;
+            if (event.data.type === 'dataSaved') {
+                this.lastCloudSaveTimestamps[event.data.key] = event.data.timestamp;
+                // Optionally, force modal re-render if open
+                if (this.authModal.classList.contains('active')) {
+                    this.renderAuthModal();
+                }
+            } else if (event.data.type === 'userData') {
+                this.handleUserDataImport(event.data.key, event.data.value);
+            }
+        });
+
+        // Helper for merging arrays of objects by id
+        this.mergeById = (localArr, cloudArr) => {
+            if (!Array.isArray(localArr)) localArr = [];
+            if (!Array.isArray(cloudArr)) cloudArr = [];
+            const map = new Map();
+            for (const item of localArr) if (item && item.id) map.set(item.id, item);
+            for (const item of cloudArr) if (item && item.id) map.set(item.id, item);
+            return Array.from(map.values());
+        };
+        // Handle userData import responses
+        this._importKeysQueue = [];
+        this._importResults = {};
+        this.handleUserDataImport = (key, cloudValue) => {
+            this._importResults[key] = cloudValue;
+            // Wait for all keys
+            if (Object.keys(this._importResults).length === this._importKeysQueue.length) {
+                // Merge and save for each key
+                let importedAny = false;
+                for (const k of this._importKeysQueue) {
+                    const local = loadData(k, null);
+                    const cloud = this._importResults[k];
+                    let merged = null;
+                    if (Array.isArray(local) && Array.isArray(cloud)) {
+                        merged = this.mergeById(local, cloud);
+                    } else if (typeof local === 'object' && typeof cloud === 'object' && local && cloud) {
+                        merged = { ...cloud, ...local };
+                    } else {
+                        merged = cloud || local;
+                    }
+                    if (merged && JSON.stringify(merged) !== JSON.stringify(local)) {
+                        saveData(k, merged);
+                        importedAny = true;
+                    }
+                }
+                this._importKeysQueue = [];
+                this._importResults = {};
+                // Show success message
+                if (this.authContent) {
+                    const msg = document.createElement('div');
+                    msg.style.color = 'var(--matrix-green)';
+                    msg.style.marginTop = '12px';
+                    msg.style.textAlign = 'center';
+                    msg.textContent = importedAny ? '✅ Data imported and merged from cloud.' : 'No new data to import.';
+                    this.authContent.appendChild(msg);
+                }
+            }
+        };
+
         this.renderAuthModal = () => {
             if (!this.authContent) return;
             this.authContent.innerHTML = '';
@@ -295,6 +360,47 @@ class MatrixTodo {
                     info.innerHTML += `<div style="margin-bottom:10px;">${this.currentUser.displayName}</div>`;
                 }
                 this.authContent.appendChild(info);
+                // Show last saved timestamp if available
+                const lastSaved = Object.values(this.lastCloudSaveTimestamps).length
+                    ? new Date(Math.max(...Object.values(this.lastCloudSaveTimestamps))).toLocaleString()
+                    : null;
+                if (lastSaved) {
+                    const ts = document.createElement('div');
+                    ts.style.textAlign = 'center';
+                    ts.style.fontSize = '13px';
+                    ts.style.opacity = '0.7';
+                    ts.style.marginBottom = '10px';
+                    ts.textContent = `Data last saved to cloud: ${lastSaved}`;
+                    this.authContent.appendChild(ts);
+                }
+                // Import from cloud button
+                const importBtn = document.createElement('button');
+                importBtn.textContent = 'Import data from cloud';
+                importBtn.style.background = 'none';
+                importBtn.style.border = '1px solid var(--matrix-green)';
+                importBtn.style.color = 'var(--matrix-green)';
+                importBtn.style.padding = '8px 24px';
+                importBtn.style.cursor = 'pointer';
+                importBtn.style.fontFamily = 'inherit';
+                importBtn.style.fontSize = '14px';
+                importBtn.style.borderRadius = '4px';
+                importBtn.style.marginBottom = '12px';
+                importBtn.addEventListener('click', () => {
+                    // Keys to import/merge
+                    this._importKeysQueue = [
+                        'matrix-tasks',
+                        'matrix-notes',
+                        'matrix-documents',
+                        'matrix-diagram-entities',
+                        'matrix-diagram-connections'
+                    ];
+                    this._importResults = {};
+                    for (const k of this._importKeysQueue) {
+                        this.sandbox.contentWindow.postMessage({ type: 'getUserData', key: k }, '*');
+                    }
+                });
+                this.authContent.appendChild(importBtn);
+                // Logout button
                 const logoutBtn = document.createElement('button');
                 logoutBtn.textContent = 'Sign Out';
                 logoutBtn.style.marginTop = '16px';
@@ -311,6 +417,14 @@ class MatrixTodo {
                 });
                 this.authContent.appendChild(logoutBtn);
             } else {
+                // Add helpful message about cloud saving
+                const helpMsg = document.createElement('div');
+                helpMsg.style.marginBottom = '18px';
+                helpMsg.style.color = 'var(--matrix-green)';
+                helpMsg.style.fontSize = '15px';
+                helpMsg.style.textAlign = 'center';
+                helpMsg.innerHTML = `Sign in to <b>securely back up</b> your tasks, notes, documents, and diagrams to the <b>cloud</b>.<br><span style='opacity:0.7;font-size:13px;'>Without logging in, your data is only saved locally on this device.</span>`;
+                this.authContent.appendChild(helpMsg);
                 // Show Google login button
                 const loginBtn = document.createElement('button');
                 loginBtn.textContent = 'Sign in with Google';

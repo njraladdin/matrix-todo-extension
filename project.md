@@ -28,3 +28,4 @@
 - add user auth, done 
 
 - backup data to firestore, done 
+- import data from firestore

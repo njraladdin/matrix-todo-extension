@@ -124,13 +124,15 @@ async function saveUserDataToFirestore(uid, key, value) {
         const updateObj = {};
         updateObj[`data.${key}`] = value;
         await userDocRef.set(updateObj, { merge: true });
+        const timestamp = Date.now();
+        window.parent.postMessage({ type: 'dataSaved', key, timestamp }, '*');
         console.log(`✅ Saved data for user ${uid}, key: ${key}`);
     } catch (error) {
         console.error('❌ Error saving user data to Firestore:', error);
     }
 }
 
-// Listen for saveData messages from the main app
+// Listen for saveData and getUserData messages from the main app
 window.addEventListener('message', async (event) => {
     if (!event.data || !event.data.type) return;
     if (event.data.type === 'saveData') {
@@ -138,6 +140,21 @@ window.addEventListener('message', async (event) => {
             await saveUserDataToFirestore(currentUser.uid, event.data.key, event.data.value);
         } else {
             console.log('User not authenticated, skipping Firestore save for', event.data.key);
+        }
+    } else if (event.data.type === 'getUserData') {
+        if (currentUser && currentUser.uid) {
+            try {
+                const userDocRef = db.collection('users').doc(currentUser.uid);
+                const doc = await userDocRef.get();
+                const data = doc.exists && doc.data() && doc.data().data ? doc.data().data : {};
+                const value = data[event.data.key] || null;
+                window.parent.postMessage({ type: 'userData', key: event.data.key, value }, '*');
+            } catch (error) {
+                console.error('❌ Error fetching user data from Firestore:', error);
+                window.parent.postMessage({ type: 'userData', key: event.data.key, value: null, error: error.message }, '*');
+            }
+        } else {
+            window.parent.postMessage({ type: 'userData', key: event.data.key, value: null, error: 'not_authenticated' }, '*');
         }
     }
 });
