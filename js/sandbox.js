@@ -74,34 +74,35 @@ window.addEventListener("message", async (event) => {
             console.error("Error adding task:", error);
         }
     } 
-    else if (event.data.type === "getTasks") {
-        console.log("Fetching all tasks...");
-        try {
-            const snapshot = await db.collection("tasks")
-                .orderBy("timestamp", "desc")
-                .get();
-
-            console.log("Snapshot size:", snapshot.size);
-            const tasks = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                console.log("Document data:", data);
-                tasks.push({ 
-                    id: doc.id, 
-                    ...data,
-                    timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
-                });
-            });
-
-            console.log("Tasks array before sending:", tasks);
-            window.parent.postMessage({ 
-                type: "tasksLoaded", 
-                tasks 
-            }, "*");
-        } catch (error) {
-            console.error("Error fetching tasks:", error);
-        }
-    }
+    // REMOVED: getTasks handler to avoid fetching all tasks from Firebase
+    // else if (event.data.type === "getTasks") {
+    //     console.log("Fetching all tasks...");
+    //     try {
+    //         const snapshot = await db.collection("tasks")
+    //             .orderBy("timestamp", "desc")
+    //             .get();
+    //
+    //         console.log("Snapshot size:", snapshot.size);
+    //         const tasks = [];
+    //         snapshot.forEach((doc) => {
+    //             const data = doc.data();
+    //             console.log("Document data:", data);
+    //             tasks.push({ 
+    //                 id: doc.id, 
+    //                 ...data,
+    //                 timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+    //             });
+    //         });
+    //
+    //         console.log("Tasks array before sending:", tasks);
+    //         window.parent.postMessage({ 
+    //             type: "tasksLoaded", 
+    //             tasks 
+    //         }, "*");
+    //     } catch (error) {
+    //         console.error("Error fetching tasks:", error);
+    //     }
+    // }
 });
 
 // Add this to test postMessage
@@ -141,3 +142,53 @@ db.collection("tasks").limit(3).get().then(snapshot => {
 }).catch(error => {
     console.error("TEST QUERY - Error:", error);
 });
+
+// --- Firebase Auth Integration ---
+if (firebase.auth) {
+    const auth = firebase.auth();
+    let lastUser = null;
+
+    // Helper to send auth state to parent
+    function sendAuthState(user) {
+        window.parent.postMessage({
+            type: 'authState',
+            user: user ? {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                uid: user.uid
+            } : null
+        }, '*');
+    }
+
+    // Listen for auth state changes
+    auth.onAuthStateChanged((user) => {
+        if (user !== lastUser) {
+            lastUser = user;
+            sendAuthState(user);
+        }
+    });
+
+    // Listen for login/logout/getAuthState messages
+    window.addEventListener('message', async (event) => {
+        if (!event.data || !event.data.type) return;
+        if (event.data.type === 'loginWithGoogle') {
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                const result = await auth.signInWithPopup(provider);
+                sendAuthState(result.user);
+            } catch (error) {
+                window.parent.postMessage({ type: 'authError', error: error.message }, '*');
+            }
+        } else if (event.data.type === 'logout') {
+            try {
+                await auth.signOut();
+                sendAuthState(null);
+            } catch (error) {
+                window.parent.postMessage({ type: 'authError', error: error.message }, '*');
+            }
+        } else if (event.data.type === 'getAuthState') {
+            sendAuthState(auth.currentUser);
+        }
+    });
+}

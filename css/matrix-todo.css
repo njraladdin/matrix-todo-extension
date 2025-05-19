@@ -125,19 +125,19 @@ body {
 }
 
 /* Keyboard shortcut hint */
-.shortcut-hint {
+.footer-bar {
     position: fixed;
     bottom: 10px;
     right: 10px;
     display: flex;
     align-items: center;
-    font-size: 10px;
-    opacity: 0.5;
+    font-size: 12px;
+    opacity: .6;
     z-index: 1000;
     transition: opacity 0.3s;
 }
 
-.shortcut-hint:hover {
+.footer-bar:hover {
     opacity: 1;
 }
 
@@ -557,36 +557,42 @@ body::before {
     border-left: 2px solid var(--matrix-green);
 }
 
-.settings-wheel {
+.footer-action {
     position: static;
     cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.3s;
-    font-size: 10px;
-    order: -1;
-}
-
-.settings-wheel:hover {
     opacity: 1;
+    transition: none;
+    font-size: 12px;
+    color: var(--matrix-green);
+    margin: 0 14px;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+.footer-action:hover {
     text-decoration: underline;
 }
 
-.whats-new-button {
-    position: static;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.3s;
-    font-size: 10px;
-    order: 0;
-}
-
-.whats-new-button:hover {
+.footer-text {
+    color: var(--matrix-green);
+    font-size: 15px;
     opacity: 1;
+    margin-left: 0;
+    text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.9),
+                 0 0 4px rgba(var(--matrix-green-rgb), 0.7),
+                 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+.footer-text a {
+    color: var(--matrix-green);
     text-decoration: underline;
+}
+.footer-text a:hover {
+    text-decoration: none;
 }
 
 /* Update separator style to account for the new button */
-.shortcut-hint > *:not(:last-child)::after {
+.footer-bar > *:not(:last-child)::after {
     content: "•";
     margin: 0 12px;
     opacity: 0.6;
@@ -936,5 +942,78 @@ body::before {
     transition: opacity 0.2s;
     z-index: 1000;
     white-space: nowrap;
+}
+
+.auth-button {
+    position: static;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+    font-size: 10px;
+    order: 1;
+    color: var(--matrix-green);
+    margin: 0 8px;
+}
+.auth-button:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.auth-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.97);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.15);
+    padding: 24px;
+    z-index: 1000;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05);
+    max-height: 80vh;
+    overflow-y: hidden;
+    flex-direction: column;
+}
+.auth-modal.active {
+    display: flex;
+}
+.auth-modal h2 {
+    color: var(--matrix-green);
+    margin-bottom: 20px;
+    font-size: 16px;
+    letter-spacing: 2px;
+    opacity: 0.9;
+    text-shadow: 0 0 2px rgba(var(--matrix-green-rgb), 0.4);
+}
+.close-auth {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--matrix-green);
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 18px;
+}
+.close-auth:hover {
+    opacity: 1;
+}
+.auth-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+}
+.auth-user-email {
+    color: var(--matrix-green);
+    font-size: 13px;
+    margin-top: 10px;
+    opacity: 0.8;
+    word-break: break-all;
 }
 

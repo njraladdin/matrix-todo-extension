@@ -24,5 +24,7 @@
 
 
 - refactor css, done 
-- change calling nodes to another more accurate name 
-- connect to userrr account to backup documents 
+- change calling nodes to another more accurate name, done 
+- add user auth, done 
+
+- backup data to firestore

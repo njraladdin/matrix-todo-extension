@@ -84,11 +84,6 @@ class MatrixTodo {
         console.log("Found sandbox iframe:", this.sandbox);
         
         // Ensure sandbox is loaded before trying to use it
-        if (this.sandbox.contentDocument.readyState === 'complete') {
-            this.loadTasksFromFirebase();
-        } else {
-            this.sandbox.onload = () => this.loadTasksFromFirebase();
-        }
 
         this.globalTodosContainer = document.querySelector('.global-todos');
         console.log("Setting up global todos container:", this.globalTodosContainer);
@@ -159,7 +154,7 @@ class MatrixTodo {
         this.whatsNewModal.checkForUpdates();
 
         // Set up What's New button click handler
-        const whatsNewButton = document.querySelector('.whats-new-button');
+        const whatsNewButton = document.querySelector('.footer-action[data-action="whatsnew"]');
         if (whatsNewButton) {
             whatsNewButton.addEventListener('click', () => {
                 console.log('What\'s New button clicked!');
@@ -206,6 +201,133 @@ class MatrixTodo {
 
         // Render initial document state
         this.documentManager.renderDocuments();
+
+        // --- AUTH MODAL LOGIC ---
+        this.authButton = document.querySelector('.footer-action[data-action="auth"]');
+        this.authModal = document.querySelector('.auth-modal');
+        this.authContent = document.querySelector('.auth-content');
+        this.closeAuthBtn = document.querySelector('.close-auth');
+        this.authUserEmail = null;
+        this.currentUser = null;
+
+        // Show modal on button click
+        this.authButton.addEventListener('click', () => {
+            this.openAuthModal();
+        });
+        // Close modal on close button
+        this.closeAuthBtn.addEventListener('click', () => {
+            this.closeAuthModal();
+        });
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === this.authModal) {
+                this.closeAuthModal();
+            }
+        });
+
+        // Listen for auth state from sandbox
+        window.addEventListener('message', (event) => {
+            if (!event.data) return;
+            if (event.data.type === 'authState') {
+                this.currentUser = event.data.user;
+                this.updateAuthUI();
+            } else if (event.data.type === 'authError') {
+                this.showAuthError(event.data.error);
+            }
+        });
+        // Request current auth state on load
+        setTimeout(() => {
+            this.sandbox.contentWindow.postMessage({ type: 'getAuthState' }, '*');
+        }, 1000);
+
+        // Update shortcut bar with user email if logged in
+        this.updateAuthUI = () => {
+            if (this.currentUser && this.currentUser.email) {
+                this.authButton.textContent = `[${this.currentUser.email}]`;
+                this.authButton.title = this.currentUser.email;
+                // Also show email at the bottom (attribution area)
+                if (!this.authUserEmail) {
+                    this.authUserEmail = document.createElement('span');
+                    this.authUserEmail.className = 'auth-user-email';
+                    document.querySelector('.shortcut-hint').appendChild(this.authUserEmail);
+                }
+                this.authUserEmail.textContent = this.currentUser.email;
+            } else {
+                this.authButton.textContent = '[LOGIN/JOIN]';
+                this.authButton.title = '';
+                if (this.authUserEmail) {
+                    this.authUserEmail.remove();
+                    this.authUserEmail = null;
+                }
+            }
+            // Update modal content if open
+            if (this.authModal.classList.contains('active')) {
+                this.renderAuthModal();
+            }
+        };
+
+        this.showAuthError = (msg) => {
+            if (!this.authContent) return;
+            const err = document.createElement('div');
+            err.style.color = '#ff5555';
+            err.style.marginTop = '10px';
+            err.textContent = msg;
+            this.authContent.appendChild(err);
+        };
+
+        this.openAuthModal = () => {
+            this.authModal.classList.add('active');
+            this.renderAuthModal();
+        };
+        this.closeAuthModal = () => {
+            this.authModal.classList.remove('active');
+        };
+        this.renderAuthModal = () => {
+            if (!this.authContent) return;
+            this.authContent.innerHTML = '';
+            if (this.currentUser) {
+                // Show user info and logout
+                const info = document.createElement('div');
+                info.style.textAlign = 'center';
+                info.innerHTML = `<div style="margin-bottom:10px;">Signed in as <b>${this.currentUser.email}</b></div>`;
+                if (this.currentUser.displayName) {
+                    info.innerHTML += `<div style="margin-bottom:10px;">${this.currentUser.displayName}</div>`;
+                }
+                this.authContent.appendChild(info);
+                const logoutBtn = document.createElement('button');
+                logoutBtn.textContent = 'Sign Out';
+                logoutBtn.style.marginTop = '16px';
+                logoutBtn.style.background = 'none';
+                logoutBtn.style.border = '1px solid var(--matrix-green)';
+                logoutBtn.style.color = 'var(--matrix-green)';
+                logoutBtn.style.padding = '8px 24px';
+                logoutBtn.style.cursor = 'pointer';
+                logoutBtn.style.fontFamily = 'inherit';
+                logoutBtn.style.fontSize = '14px';
+                logoutBtn.style.borderRadius = '4px';
+                logoutBtn.addEventListener('click', () => {
+                    this.sandbox.contentWindow.postMessage({ type: 'logout' }, '*');
+                });
+                this.authContent.appendChild(logoutBtn);
+            } else {
+                // Show Google login button
+                const loginBtn = document.createElement('button');
+                loginBtn.textContent = 'Sign in with Google';
+                loginBtn.style.background = 'none';
+                loginBtn.style.border = '1px solid var(--matrix-green)';
+                loginBtn.style.color = 'var(--matrix-green)';
+                loginBtn.style.padding = '8px 24px';
+                loginBtn.style.cursor = 'pointer';
+                loginBtn.style.fontFamily = 'inherit';
+                loginBtn.style.fontSize = '14px';
+                loginBtn.style.borderRadius = '4px';
+                loginBtn.addEventListener('click', () => {
+                    this.authContent.innerHTML = '<div style="color:var(--matrix-green);margin-top:10px;">Opening Google sign-in...</div>';
+                    this.sandbox.contentWindow.postMessage({ type: 'loginWithGoogle' }, '*');
+                });
+                this.authContent.appendChild(loginBtn);
+            }
+        };
     }
 
     initializeProgressBar() {
@@ -570,11 +692,6 @@ class MatrixTodo {
                 task: updatedTask 
             }, "*");
         }
-    }
-
-    loadTasksFromFirebase() {
-        console.log("Loading tasks from Firebase...");
-        this.sandbox.contentWindow.postMessage({ type: "getTasks" }, "*");
     }
 
     loadGlobalTodos() {

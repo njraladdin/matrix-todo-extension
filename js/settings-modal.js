@@ -4,7 +4,7 @@ class SettingsModal {
         this.taskHistory = matrixTodo.taskHistory;
         
         // Find DOM elements
-        this.settingsWheel = document.querySelector('.settings-wheel');
+        this.settingsWheel = document.querySelector('.footer-action[data-action="settings"]');
         this.modal = document.querySelector('.settings-modal');
         this.closeButton = document.querySelector('.close-settings');
         this.historyContainer = document.querySelector('.history-container');
