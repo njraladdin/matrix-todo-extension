@@ -1,0 +1,492 @@
+.diagram-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 10000px; /* Match body's min-height */
+    pointer-events: none;
+    z-index: 9; /* Below notes but above other elements */
+    display: none; /* Hidden by default */
+}
+
+.diagram-overlay.active {
+    display: block;
+}
+
+/* Special case for always-active mode to ensure normal page interaction */
+.diagram-overlay.always-active {
+    pointer-events: none;
+    z-index: 5; /* Lower z-index to not interfere with other interactions */
+}
+
+/* Only make diagram components interactive */
+.diagram-node, 
+.connection-handle, 
+.delete-node-btn, 
+.delete-connection-btn,
+.node-content {
+    pointer-events: auto;
+}
+
+.diagram-overlay.connection-dragging {
+    cursor: crosshair;
+    pointer-events: auto; /* Enable pointer events during dragging */
+}
+
+/* Diagram node styles - updated to be more subtle and elegant like notes */
+.diagram-node {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    min-width: 160px;
+    min-height: 70px;
+    max-width: 300px;
+    pointer-events: auto;
+    cursor: move;
+    will-change: transform;
+    z-index: 12;
+    box-shadow: 
+        0 0 20px rgba(0, 0, 0, 0.2),
+        inset 0 0 1px rgba(var(--matrix-green-rgb), 0.05),
+        0 0 2px rgba(var(--matrix-green-rgb), 0.03);
+    transition: box-shadow 0.3s ease, border 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    margin-top: 18px;
+}
+
+/* Dashed node style */
+.diagram-node.dashed {
+    border: 1px dashed rgba(var(--matrix-green-rgb), 0.3);
+    background: rgba(0, 0, 0, 0.8); /* Slightly darker background */
+}
+
+.diagram-node.dashed:hover {
+    border: 1px dashed rgba(var(--matrix-green-rgb), 0.5);
+    box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
+}
+
+/* Remove the old drag area since we now have a dedicated drag handle */
+/* .diagram-node::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 30px;
+    height: 24px;
+    cursor: move;
+    z-index: 1;
+} */
+
+.node-content {
+    color: var(--matrix-green);
+    font-family: monospace;
+    font-size: 14px;
+    padding: 10px 10px 14px 10px; /* Extra padding at bottom to avoid overlap with drag handle */
+    outline: none;
+    flex: 1;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.3),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.2);
+    letter-spacing: 1px;
+    opacity: 0.9;
+    cursor: text;
+    position: relative;
+    z-index: 2;
+}
+
+.diagram-node:hover {
+    box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.15);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.2);
+}
+
+.diagram-node.dragging {
+    opacity: 0.8;
+    box-shadow: 
+        0 0 15px rgba(0, 0, 0, 0.4),
+        inset 0 0 3px rgba(var(--matrix-green-rgb), 0.2);
+    z-index: 13;
+}
+
+.diagram-node.source-node {
+    border: 1px dashed rgba(var(--matrix-green-rgb), 0.3);
+    box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.3),
+        inset 0 0 3px rgba(var(--matrix-green-rgb), 0.1);
+    animation: subtleNodePulse 6s infinite;
+}
+
+/* Delete button styling */
+.delete-node-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: var(--matrix-green);
+    font-size: 14px;
+    cursor: pointer !important;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+    z-index: 15;
+    padding: 4px 8px;
+}
+
+.delete-node-btn:hover {
+    opacity: 0.6;
+}
+
+/* Style for note-style drag handle in diagram nodes */
+.diagram-node .note-drag-handle {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    cursor: grab;
+    opacity: 0.25; /* More subtle by default */
+    z-index: 15;
+}
+
+/* Dots style for drag handle */
+.diagram-node .note-drag-handle::after {
+    content: "···";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: var(--matrix-green);
+    cursor: move;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 
+        0 0 2px rgba(var(--matrix-green-rgb), 0.6),
+        0 0 4px rgba(var(--matrix-green-rgb), 0.4);
+}
+
+.diagram-node:hover .note-drag-handle {
+    opacity: 0.7; /* More visible on hover but still subtle */
+}
+
+.diagram-node .note-drag-handle:active {
+    cursor: grabbing;
+}
+
+.connection-handle {
+    position: absolute;
+    bottom: -8px; 
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.4);
+    background: rgba(0, 0, 0, 0.8);
+    cursor: grab;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 14;
+    box-shadow: 
+        0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+}
+
+/* Replace plus sign with dots to indicate draggable connection point */
+.connection-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--matrix-green);
+    box-shadow: 0 0 3px rgba(var(--matrix-green-rgb), 0.4);
+}
+
+/* Show handle on hover */
+.diagram-node:hover .connection-handle {
+    opacity: 0.75;
+    transform: translateX(-50%) scale(1);
+    animation: handlePulse 3s infinite;
+}
+
+/* Create subtle movement on hover to suggest draggability */
+.connection-handle:hover {
+    opacity: 0.9;
+    border: 1px solid var(--matrix-green);
+    background: rgba(var(--matrix-green-rgb), 0.06);
+    box-shadow: 
+        0 0 5px rgba(var(--matrix-green-rgb), 0.5),
+        inset 0 0 3px rgba(var(--matrix-green-rgb), 0.3);
+    transform: translateX(-50%) scale(1.1) translateY(-1px);
+}
+
+/* Add tooltip with instruction - more subtle version */
+.connection-handle::after {
+    content: "Drag to connect";
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    font-size: 9px;
+    white-space: nowrap;
+    color: rgba(var(--matrix-green-rgb), 0.8);
+    opacity: 0;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 2px 5px;
+    border-radius: 2px;
+    z-index: 20;
+}
+
+.connection-handle:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+@keyframes handlePulse {
+    0% {
+        box-shadow: 
+            0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+            inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+    }
+    50% {
+        box-shadow: 
+            0 0 5px rgba(var(--matrix-green-rgb), 0.4),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.3);
+    }
+    100% {
+        box-shadow: 
+            0 0 3px rgba(var(--matrix-green-rgb), 0.3),
+            inset 0 0 2px rgba(var(--matrix-green-rgb), 0.2);
+    }
+}
+
+.diagram-connection {
+    stroke: var(--matrix-green);
+    stroke-width: 1.5px;
+    opacity: 0.6;
+    filter: drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.3));
+    transition: stroke-width 0.2s ease, opacity 0.2s ease;
+    pointer-events: auto; /* Make sure it's clickable */
+}
+
+.diagram-connection.solid-connection {
+    stroke-dasharray: none; /* No dash for solid lines */
+}
+
+.diagram-connection.dashed-connection {
+    stroke-dasharray: 5, 8; /* Dashed pattern */
+    animation: connectionFlow 240s linear infinite;
+}
+
+.diagram-connection:hover {
+    stroke-width: 2px;
+    opacity: 0.8;
+}
+
+.diagram-connection.temp-connection {
+    stroke: var(--matrix-green);
+    stroke-width: 1.5px;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 0.4));
+}
+
+.diagram-connection.temp-connection.solid-connection {
+    stroke-dasharray: none;
+}
+
+.diagram-connection.temp-connection.dashed-connection {
+    stroke-dasharray: 5, 8;
+    animation: connectionFlow 240s linear infinite;
+}
+
+.connection-hit-area {
+    stroke: transparent;
+    stroke-width: 10px;
+    pointer-events: stroke;
+}
+
+.node-floating-tags {
+    position: absolute;
+    top: -24px; /* Position above the node */
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    z-index: 2;
+}
+
+.floating-tag {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(var(--matrix-green-rgb), 0.1);
+    color: var(--matrix-green);
+    font-size: 12px;
+    padding: 1px 5px;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-shadow: 0 0 1px rgba(var(--matrix-green-rgb), 0.3);
+}
+
+.right-indicator {
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+.left-indicator {
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+.top-indicator {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+.bottom-indicator {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        rgba(var(--matrix-green-rgb), 0) 0%,
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) - 20%),
+        rgba(var(--matrix-green-rgb), 0.9) var(--connection-pos),
+        rgba(var(--matrix-green-rgb), 0) calc(var(--connection-pos) + 20%),
+        rgba(var(--matrix-green-rgb), 0) 100%
+    );
+    filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.6));
+}
+
+.connection-indicator.active {
+    animation: indicatorPulse 3s infinite;
+}
+
+@keyframes indicatorPulse {
+    0% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 4px rgba(var(--matrix-green-rgb), 1.0)) 
+               drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
+    }
+    100% {
+        opacity: 0.85;
+        filter: drop-shadow(0 0 1px rgba(var(--matrix-green-rgb), 1.0))
+               drop-shadow(0 0 3px rgba(var(--matrix-green-rgb), 0.9)) 
+               drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.5));
+    }
+}
+
+@keyframes connectionFlow {
+    0% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 1000;
+    }
+}
+
+@keyframes subtleNodePulse {
+    0% {
+        box-shadow: 
+            0 0 10px rgba(0, 0, 0, 0.3),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.1);
+        border-color: rgba(var(--matrix-green-rgb), 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 0 15px rgba(0, 0, 0, 0.4),
+            inset 0 0 5px rgba(var(--matrix-green-rgb), 0.2);
+        border-color: rgba(var(--matrix-green-rgb), 0.5);
+    }
+    100% {
+        box-shadow: 
+            0 0 10px rgba(0, 0, 0, 0.3),
+            inset 0 0 3px rgba(var(--matrix-green-rgb), 0.1);
+        border-color: rgba(var(--matrix-green-rgb), 0.3);
+    }
+}
+
+.connection-point {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15; /* Ensure it appears above the standard indicators */
+    /* Position will be set dynamically */
+}
+
+.temp-connection-point {
+    filter: drop-shadow(0 0 2px rgba(var(--matrix-green-rgb), 1.0))
+           drop-shadow(0 0 6px rgba(var(--matrix-green-rgb), 0.9)) 
+           drop-shadow(0 0 12px rgba(var(--matrix-green-rgb), 0.8));
+    opacity: 1 !important;
+}
+
+.delete-connection-btn {
+    font-size: 24px;
+    fill: var(--matrix-green);
+    cursor: pointer;
+    opacity: 0; /* Hidden by default - controlled via JS */
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
+} 

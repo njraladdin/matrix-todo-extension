@@ -272,6 +272,140 @@ class WhatsNewModal {
                     </div>
                 `
             },
+            'documents-update': {
+                id: 'documents-update',
+                title: 'DOCUMENTS',
+                features: [
+                    'Create floating documents',
+                    'Edit, drag, and organize your notes'
+                ],
+                preview: `
+                    <style>
+                        .documents-preview-container {
+                            margin: 32px 0 24px;
+                            display: flex;
+                            justify-content: center;
+                            align-items: flex-start;
+                        }
+                        .document-preview {
+                            width: 520px;
+                            min-height: 260px;
+                            background: rgba(0,0,0,0.82);
+                            border: 1.5px solid var(--matrix-green);
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(var(--matrix-green-rgb),0.07);
+                            font-family: 'Fira Mono', 'Consolas', 'Menlo', monospace;
+                            color: var(--matrix-green);
+                            display: flex;
+                            flex-direction: column;
+                            position: relative;
+                            overflow: hidden;
+                            /* CRT scanline effect */
+                            background-image: repeating-linear-gradient(
+                                to bottom,
+                                rgba(0,0,0,0) 0px,
+                                rgba(0,0,0,0) 2px,
+                                rgba(0,255,0,0.04) 3px,
+                                rgba(0,0,0,0) 4px
+                            );
+                        }
+                        .document-header-preview {
+                            background: rgba(var(--matrix-green-rgb),0.08);
+                            padding: 12px 24px 8px 24px;
+                            font-size: 20px;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                            border-bottom: 1px solid rgba(var(--matrix-green-rgb),0.15);
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                        }
+                        .document-title-preview {
+                            flex: 1;
+                            outline: none;
+                            background: transparent;
+                            border: none;
+                            color: var(--matrix-green);
+                            font-family: inherit;
+                            font-size: inherit;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                        }
+                        .close-btn-preview {
+                            color: var(--matrix-green);
+                            font-size: 18px;
+                            font-family: inherit;
+                            background: none;
+                            border: none;
+                            cursor: pointer;
+                            opacity: 0.35;
+                            transition: opacity 0.2s;
+                            margin-left: 12px;
+                            box-shadow: none;
+                        }
+                        .close-btn-preview:hover {
+                            opacity: 0.7;
+                        }
+                        .document-content-preview {
+                            padding: 24px 32px 16px 32px;
+                            font-size: 16px;
+                            min-height: 120px;
+                            opacity: 0.95;
+                        }
+                        .document-list-preview {
+                            margin: 0;
+                            padding: 0;
+                            list-style: none;
+                        }
+                        .document-list-preview li {
+                            color: var(--matrix-green);
+                            font-family: inherit;
+                            font-size: 16px;
+                            margin-bottom: 8px;
+                            letter-spacing: 0.5px;
+                            position: relative;
+                            padding-left: 18px;
+                        }
+                        .document-list-preview li::before {
+                            content: '-';
+                            position: absolute;
+                            left: 0;
+                            color: var(--matrix-green);
+                            opacity: 0.9;
+                        }
+                        .drag-indicator-preview {
+                            color: var(--matrix-green);
+                            font-size: 20px;
+                            margin-right: 14px;
+                            opacity: 0.5;
+                            cursor: grab;
+                            user-select: none;
+                            display: flex;
+                            align-items: center;
+                            letter-spacing: 4px;
+                        }
+                    </style>
+                    <div class="documents-preview-container">
+                        <div class="document-preview">
+                            <div class="document-header-preview">
+                                <span class="drag-indicator-preview">&bull;&bull;&bull;</span>
+                                <span class="document-title-preview">IDEAS</span>
+                                <button class="close-btn-preview" tabindex="-1">×</button>
+                            </div>
+                            <div class="document-content-preview">
+                                <ul class="document-list-preview">
+                                    <li>bank questions chatbot</li>
+                                    <li>learn french through make-your-own-adventure visual stories</li>
+                                    <li>photograph lesson, create quizzes to memorize it</li>
+                                    <li>keyboard sounds whenever you type (typewriter, mechanical keyboard ...)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
             'groups-update': {
                 id: 'groups-update',
                 title: 'TASK GROUPS',
