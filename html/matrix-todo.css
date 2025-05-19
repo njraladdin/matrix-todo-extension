@@ -1019,6 +1019,28 @@ opacity: 1;
     transform-origin: top left;
 }
 
+/* Menu category styling */
+.menu-category {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--matrix-green);
+    opacity: 0.5;
+    padding: 6px 12px 2px;
+    margin-top: 6px;
+    border-top: 1px solid rgba(var(--matrix-green-rgb), 0.08);
+}
+
+/* Remove top border from first category */
+.menu-category:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+/* Add a bit more padding to items that follow a category */
+.menu-category + .menu-item {
+    padding-top: 4px;
+}
+
 @keyframes menuAppear {
     from {
         opacity: 0;

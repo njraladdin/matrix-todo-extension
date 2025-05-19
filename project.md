@@ -24,5 +24,5 @@
 
 
 
-
+- change calling nodes to another more accurate name 
 - connect to userrr account to backup documents 

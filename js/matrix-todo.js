@@ -823,12 +823,17 @@ class MatrixTodo {
             const existingMenus = document.querySelectorAll('.matrix-context-menu');
             existingMenus.forEach(menu => menu.remove());
             
-            // Create our custom menu
+            // Create our custom menu with categorized items
             const menu = document.createElement('div');
             menu.className = 'matrix-context-menu';
             menu.innerHTML = `
+                <div class="menu-category">NOTES</div>
                 <div class="menu-item" data-action="add-note">ADD NOTE</div>
+                
+                <div class="menu-category">DOCUMENTS</div>
                 <div class="menu-item" data-action="add-document">ADD DOCUMENT</div>
+                
+                <div class="menu-category">DIAGRAMS</div>
                 <div class="menu-item" data-action="add-diagram-node">ADD DIAGRAM NODE</div>
                 <div class="menu-item" data-action="add-dashed-node">ADD DASHED NODE</div>
             `;
