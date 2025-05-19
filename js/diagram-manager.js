@@ -1,11 +1,11 @@
 class DiagramManager {
     constructor() {
-        this.nodes = JSON.parse(localStorage.getItem('matrix-diagram-nodes')) || [];
+        this.entities = JSON.parse(localStorage.getItem('matrix-diagram-entities')) || [];
         this.connections = JSON.parse(localStorage.getItem('matrix-diagram-connections')) || [];
         this.diagramOverlay = document.querySelector('.diagram-overlay');
         
-        // Calculate the next node ID based on existing nodes
-        this.nextNodeId = this.calculateNextNodeId();
+        // Calculate the next entity ID based on existing entities
+        this.nextEntityId = this.calculateNextEntityId();
         
         // Clean up connections to remove duplicates and invalid references
         this.cleanupConnections();
@@ -13,7 +13,7 @@ class DiagramManager {
         // Keep track of drag state
         this.dragState = {
             isDragging: false,
-            currentNode: null,
+            currentEntity: null,
             initialX: 0,
             initialY: 0,
             xOffset: 0,
@@ -23,7 +23,7 @@ class DiagramManager {
         // Keep track of connection drag state
         this.connectionDrag = {
             isActive: false,
-            sourceNode: null,
+            sourceEntity: null,
             startX: 0,
             startY: 0,
             currentX: 0,
@@ -35,20 +35,20 @@ class DiagramManager {
     }
     
     /**
-     * Calculate the next node ID based on existing nodes
-     * @returns {number} The next available node ID
+     * Calculate the next entity ID based on existing entities
+     * @returns {number} The next available entity ID
      */
-    calculateNextNodeId() {
-        if (this.nodes.length === 0) return 1;
+    calculateNextEntityId() {
+        if (this.entities.length === 0) return 1;
         
-        // Extract numeric IDs from node IDs (e.g., "node-5" -> 5)
-        const nodeIds = this.nodes.map(node => {
-            const match = node.id.match(/^node-(\d+)$/);
+        // Extract numeric IDs from entity IDs (e.g., "entity-5" -> 5)
+        const entityIds = this.entities.map(entity => {
+            const match = entity.id.match(/^entity-(\d+)$/);
             return match ? parseInt(match[1], 10) : 0;
         });
         
         // Find the highest ID and add 1
-        return Math.max(...nodeIds) + 1;
+        return Math.max(...entityIds) + 1;
     }
     
     /**
@@ -57,13 +57,13 @@ class DiagramManager {
     cleanupConnections() {
         if (!this.connections.length) return;
         
-        // Get a list of valid node IDs
-        const validNodeIds = this.nodes.map(node => node.id);
+        // Get a list of valid entity IDs
+        const validEntityIds = this.entities.map(entity => entity.id);
         
-        // First, filter out connections with invalid node references
+        // First, filter out connections with invalid entity references
         this.connections = this.connections.filter(conn => 
-            validNodeIds.includes(conn.source) && 
-            validNodeIds.includes(conn.target)
+            validEntityIds.includes(conn.source) && 
+            validEntityIds.includes(conn.target)
         );
         
         // Then, remove duplicate connections (same source and target)
@@ -93,14 +93,15 @@ class DiagramManager {
     saveState() {
         // Make sure we're only saving what's necessary
         // Create clean copies of data without any potential circular references
-        const cleanNodes = this.nodes.map(node => ({
-            id: node.id,
-            content: node.content, // This now contains HTML with preserved line breaks
+        const cleanEntities = this.entities.map(entity => ({
+            id: entity.id,
+            type: entity.type,
+            content: entity.content, // This now contains HTML with preserved line breaks
             position: {
-                x: node.position.x,
-                y: node.position.y
+                x: entity.position.x,
+                y: entity.position.y
             },
-            isDashed: node.isDashed // Include isDashed property to persist node style
+            isDashed: entity.isDashed // Include isDashed property to persist style
         }));
         
         const cleanConnections = this.connections.map(conn => ({
@@ -109,7 +110,7 @@ class DiagramManager {
             target: conn.target
         }));
         
-        localStorage.setItem('matrix-diagram-nodes', JSON.stringify(cleanNodes));
+        localStorage.setItem('matrix-diagram-entities', JSON.stringify(cleanEntities));
         localStorage.setItem('matrix-diagram-connections', JSON.stringify(cleanConnections));
     }
     
@@ -145,19 +146,19 @@ class DiagramManager {
         this.diagramOverlay.addEventListener('mousemove', this.handleConnectionDragMove.bind(this));
         document.addEventListener('mouseup', this.handleConnectionDragEnd.bind(this));
         
-        // Global event listeners for node dragging
+        // Global event listeners for entity dragging
         document.addEventListener('mousemove', this.handleMouseMove.bind(this));
         document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     }
     
     /**
-     * Create a new node at specified position
+     * Create a new entity at specified position
      * @param {number} x - X coordinate
      * @param {number} y - Y coordinate
-     * @param {boolean} isDashed - Whether this is a dashed node
-     * @returns {Object} The created node object
+     * @param {boolean} isDashed - Whether this is a dashed entity
+     * @returns {Object} The created entity object
      */
-    createNode(x, y, isDashed = false) {
+    createEntity(x, y, isDashed = false) {
         // Calculate position relative to the container
         // Note: x and y are already page coordinates (including scroll position)
         // from the context menu handler, so we need to adjust them for the overlay
@@ -169,9 +170,10 @@ class DiagramManager {
         const relX = x - rect.left - scrollX;
         const relY = y - rect.top - scrollY;
         
-        const node = {
-            id: `node-${this.nextNodeId++}`,
-            content: '', // Empty content instead of 'NODE'
+        const entity = {
+            id: `entity-${this.nextEntityId++}`,
+            type: 'block',
+            content: '', // Empty content instead of 'BLOCK'
             position: {
                 x: relX,
                 y: relY
@@ -179,49 +181,49 @@ class DiagramManager {
             isDashed: isDashed
         };
         
-        this.nodes.push(node);
+        this.entities.push(entity);
         this.saveState();
         
-        // Create just this node in the DOM instead of re-rendering everything
-        this.renderSingleNode(node);
+        // Create just this entity in the DOM instead of re-rendering everything
+        this.renderSingleEntity(entity);
         
-        // Focus the text content of the new node for editing
+        // Focus the text content of the new entity for editing
         setTimeout(() => {
-            const nodeEl = document.getElementById(node.id);
-            if (nodeEl) {
-                const contentEl = nodeEl.querySelector('.node-content');
+            const entityEl = document.getElementById(entity.id);
+            if (entityEl) {
+                const contentEl = entityEl.querySelector('.entity-content');
                 if (contentEl) {
                     contentEl.focus();
                 }
             }
         }, 100);
         
-        return node;
+        return entity;
     }
     
     /**
-     * Render a single node without re-rendering the entire diagram
+     * Render a single entity without re-rendering the entire diagram
      */
-    renderSingleNode(node) {
+    renderSingleEntity(entity) {
         if (!this.diagramOverlay) return;
         
         // Get SVG container for connections
         this.getConnectionsContainer();
         
-        // Create the node element
-        const nodeEl = document.createElement('div');
-        nodeEl.id = node.id;
-        nodeEl.className = 'diagram-node';
+        // Create the entity element
+        const entityEl = document.createElement('div');
+        entityEl.id = entity.id;
+        entityEl.className = 'diagram-entity';
         
         // Apply dashed class if needed
-        if (node.isDashed) {
-            nodeEl.classList.add('dashed');
+        if (entity.isDashed) {
+            entityEl.classList.add('dashed');
         }
         
         // Set explicit position style
-        nodeEl.style.position = 'absolute';
-        nodeEl.style.left = `${node.position.x}px`;
-        nodeEl.style.top = `${node.position.y}px`;
+        entityEl.style.position = 'absolute';
+        entityEl.style.left = `${entity.position.x}px`;
+        entityEl.style.top = `${entity.position.y}px`;
         
         // Create note-style drag handle at the bottom-right like in notes-manager.js
         const dragHandle = document.createElement('div');
@@ -229,95 +231,95 @@ class DiagramManager {
         dragHandle.setAttribute('title', 'Drag to move');
         
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-node-btn';
+        deleteBtn.className = 'delete-entity-btn';
         deleteBtn.textContent = '×';
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent event bubbling
-            this.deleteNode(node.id);
+            this.deleteEntity(entity.id);
         });
         
-        // Handle backward compatibility - if node has title and tags, convert to content
-        if (node.title !== undefined && node.content === undefined) {
+        // Handle backward compatibility - if entity has title and tags, convert to content
+        if (entity.title !== undefined && entity.content === undefined) {
             // Create content from title and tags if they exist
-            let newContent = node.title || '';
-            if (node.tags && node.tags.length > 0) {
+            let newContent = entity.title || '';
+            if (entity.tags && entity.tags.length > 0) {
                 // Add each tag as a hashtag
-                newContent += ' ' + node.tags.map(tag => `#${tag}`).join(' ');
+                newContent += ' ' + entity.tags.map(tag => `#${tag}`).join(' ');
             }
-            node.content = newContent;
-            delete node.title;
-            delete node.tags;
+            entity.content = newContent;
+            delete entity.title;
+            delete entity.tags;
             this.saveState();
         }
         
         // Create content editable div
         const content = document.createElement('div');
-        content.className = 'node-content';
+        content.className = 'entity-content';
         content.contentEditable = true;
         
         // Use innerHTML instead of textContent to preserve line breaks
-        if (node.content.includes('<br') || node.content.includes('\n') || node.content.includes('</div>')) {
+        if (entity.content.includes('<br') || entity.content.includes('\n') || entity.content.includes('</div>')) {
             // This content contains line breaks, use it directly as HTML
-            content.innerHTML = node.content;
+            content.innerHTML = entity.content;
         } else {
             // For simple content without line breaks, use textContent for safety
-            content.textContent = node.content;
+            content.textContent = entity.content;
         }
         
         content.spellcheck = false;
         content.addEventListener('input', (e) => {
             // Use innerHTML to capture formatted content including line breaks
-            this.updateNodeContent(node.id, e.target.innerHTML);
-            this.updateNodeTags(node.id);
+            this.updateEntityContent(entity.id, e.target.innerHTML);
+            this.updateEntityTags(entity.id);
         });
         
         // Create tags container for floating tags
         const tagsContainer = document.createElement('div');
-        tagsContainer.className = 'node-floating-tags';
+        tagsContainer.className = 'entity-floating-tags';
         
-        // Add elements to the node in the correct order
-        nodeEl.appendChild(tagsContainer);
-        nodeEl.appendChild(deleteBtn);
-        nodeEl.appendChild(content);
-        nodeEl.appendChild(dragHandle);
+        // Add elements to the entity in the correct order
+        entityEl.appendChild(tagsContainer);
+        entityEl.appendChild(deleteBtn);
+        entityEl.appendChild(content);
+        entityEl.appendChild(dragHandle);
         
         // Add connection indicators
-        this.addConnectionIndicators(nodeEl);
+        this.addConnectionIndicators(entityEl);
         
-        this.diagramOverlay.appendChild(nodeEl);
+        this.diagramOverlay.appendChild(entityEl);
         
         // Initialize dragging
-        this.initializeNodeDragging(nodeEl);
+        this.initializeEntityDragging(entityEl);
         
         // Apply hashtag highlighting to content
         this.highlightHashtags(content);
         
         // Parse and display any hashtags
-        this.updateNodeTags(node.id);
+        this.updateEntityTags(entity.id);
     }
     
     /**
-     * Parse hashtags from node content and create floating tags
+     * Parse hashtags from entity content and create floating tags
      */
-    updateNodeTags(nodeId) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (!node || !node.content) return;
+    updateEntityTags(entityId) {
+        const entity = this.entities.find(n => n.id === entityId);
+        if (!entity || !entity.content) return;
         
-        const nodeElement = document.getElementById(nodeId);
-        if (!nodeElement) return;
+        const entityElement = document.getElementById(entityId);
+        if (!entityElement) return;
         
         // Clear existing floating tags
-        const tagsContainer = nodeElement.querySelector('.node-floating-tags');
+        const tagsContainer = entityElement.querySelector('.entity-floating-tags');
         if (!tagsContainer) return;
         tagsContainer.innerHTML = '';
         
         // Get a text-only version of content for hashtag extraction
-        let plainContent = node.content;
+        let plainContent = entity.content;
         
         // If content has HTML, create a temporary element to extract plain text
-        if (node.content.includes('<')) {
+        if (entity.content.includes('<')) {
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = node.content;
+            tempDiv.innerHTML = entity.content;
             plainContent = tempDiv.textContent;
         }
         
@@ -325,7 +327,7 @@ class DiagramManager {
         const hashtags = plainContent.match(/#[a-zA-Z0-9_]+/g) || [];
         if (hashtags.length === 0) return;
         
-        // Create floating tags for each hashtag in a row above the node
+        // Create floating tags for each hashtag in a row above the entity
         hashtags.forEach((hashtag) => {
             const tag = document.createElement('div');
             tag.className = 'floating-tag';
@@ -337,19 +339,19 @@ class DiagramManager {
     }
     
     /**
-     * Update node content
+     * Update entity content
      */
-    updateNodeContent(nodeId, content) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node) {
+    updateEntityContent(entityId, content) {
+        const entity = this.entities.find(n => n.id === entityId);
+        if (entity) {
             // Store the raw HTML content to preserve line breaks
-            node.content = content;
+            entity.content = content;
             this.saveState();
             
             // Update the DOM element directly to avoid full re-render
-            const nodeElement = document.getElementById(nodeId);
-            if (nodeElement) {
-                const contentElement = nodeElement.querySelector('.node-content');
+            const entityElement = document.getElementById(entityId);
+            if (entityElement) {
+                const contentElement = entityElement.querySelector('.entity-content');
                 // Don't use textContent here as it would lose formatting
                 // We'll let the browser's contentEditable handle the formatting
                 
@@ -362,7 +364,7 @@ class DiagramManager {
     }
     
     /**
-     * Highlight hashtags in node content
+     * Highlight hashtags in entity content
      */
     highlightHashtags(contentElement) {
         try {
@@ -400,39 +402,39 @@ class DiagramManager {
             
             tempDiv.innerHTML = htmlContent;
             
-            // Replace content in the node
+            // Replace content in the entity
             contentElement.innerHTML = tempDiv.innerHTML;
             
             // Restore cursor position if there was a selection
             if (hasSelection) {
                 const newRange = document.createRange();
                 
-                // Find the right node and position
-                let currentNode = contentElement.firstChild;
+                // Find the right entity and position
+                let currentEntity = contentElement.firstChild;
                 let currentOffset = 0;
-                let targetNode = contentElement.firstChild;
+                let targetEntity = contentElement.firstChild;
                 let targetOffset = cursorOffset;
                 
-                // Navigate through the nodes to find the position
-                while (currentNode && currentOffset + currentNode.textContent.length < cursorOffset) {
-                    currentOffset += currentNode.textContent.length;
-                    currentNode = currentNode.nextSibling;
+                // Navigate through the entities to find the position
+                while (currentEntity && currentOffset + currentEntity.textContent.length < cursorOffset) {
+                    currentOffset += currentEntity.textContent.length;
+                    currentEntity = currentEntity.nextSibling;
                 }
                 
-                if (currentNode) {
-                    targetNode = currentNode;
+                if (currentEntity) {
+                    targetEntity = currentEntity;
                     targetOffset = cursorOffset - currentOffset;
                     
                     // Adjust if inside a span (hashtag)
-                    if (targetNode.nodeType === Node.ELEMENT_NODE && targetNode.tagName.toLowerCase() === 'span') {
-                        targetNode = targetNode.firstChild;
+                    if (targetEntity.nodeType === Node.ELEMENT_NODE && targetEntity.tagName.toLowerCase() === 'span') {
+                        targetEntity = targetEntity.firstChild;
                     }
                 }
                 
                 // Set range and selection
-                if (targetNode && targetNode.nodeType === Node.TEXT_NODE) {
-                    newRange.setStart(targetNode, Math.min(targetOffset, targetNode.textContent.length));
-                    newRange.setEnd(targetNode, Math.min(targetOffset, targetNode.textContent.length));
+                if (targetEntity && targetEntity.nodeType === Node.TEXT_NODE) {
+                    newRange.setStart(targetEntity, Math.min(targetOffset, targetEntity.textContent.length));
+                    newRange.setEnd(targetEntity, Math.min(targetOffset, targetEntity.textContent.length));
                     selection.removeAllRanges();
                     selection.addRange(newRange);
                 }
@@ -448,10 +450,10 @@ class DiagramManager {
     }
     
     /**
-     * Create a connection between two nodes
+     * Create a connection between two entities
      */
     createConnection(sourceId, targetId) {
-        // Skip if trying to connect to the same node
+        // Skip if trying to connect to the same entity
         if (sourceId === targetId) return;
         
         // Check if connection already exists (either direction)
@@ -490,12 +492,12 @@ class DiagramManager {
         line.classList.add('diagram-connection');
         line.style.cursor = 'pointer'; // Add pointer cursor to indicate clickability
         
-        // Check if either source or target node is dashed
-        const sourceNode = this.nodes.find(n => n.id === conn.source);
-        const targetNode = this.nodes.find(n => n.id === conn.target);
+        // Check if either source or target entity is dashed
+        const sourceEntity = this.entities.find(n => n.id === conn.source);
+        const targetEntity = this.entities.find(n => n.id === conn.target);
         
         // Apply appropriate connection style
-        if ((sourceNode && sourceNode.isDashed) || (targetNode && targetNode.isDashed)) {
+        if ((sourceEntity && sourceEntity.isDashed) || (targetEntity && targetEntity.isDashed)) {
             line.classList.add('dashed-connection');
         } else {
             line.classList.add('solid-connection');
@@ -604,12 +606,12 @@ class DiagramManager {
     }
     
     /**
-     * Delete a node and its connections
+     * Delete an entity and its connections
      */
-    deleteNode(nodeId) {
-        this.nodes = this.nodes.filter(node => node.id !== nodeId);
+    deleteEntity(entityId) {
+        this.entities = this.entities.filter(entity => entity.id !== entityId);
         this.connections = this.connections.filter(
-            conn => conn.source !== nodeId && conn.target !== nodeId
+            conn => conn.source !== entityId && conn.target !== entityId
         );
         
         this.saveState();
@@ -617,12 +619,12 @@ class DiagramManager {
     }
     
     /**
-     * Update node position
+     * Update entity position
      */
-    updateNodePosition(nodeId, x, y) {
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node) {
-            node.position = { x, y };
+    updateEntityPosition(entityId, x, y) {
+        const entity = this.entities.find(n => n.id === entityId);
+        if (entity) {
+            entity.position = { x, y };
             this.saveState();
         }
     }
@@ -637,12 +639,12 @@ class DiagramManager {
     }
     
     /**
-     * Start connection drag from a node
+     * Start connection drag from a entity
      */
-    startConnectionDrag(nodeId, x, y) {
+    startConnectionDrag(entityId, x, y) {
         this.connectionDrag = {
             isActive: true,
-            sourceNode: nodeId,
+            sourceEntity: entityId,
             startX: x,  // We'll calculate edge intersection in updateTemporaryConnectionLine
             startY: y,
             currentX: x,
@@ -685,13 +687,13 @@ class DiagramManager {
             tempLine.remove();
         }
         
-        // Check if ended over a node
-        const targetNodeElement = e.target.closest('.diagram-node');
-        if (targetNodeElement) {
-            const targetId = targetNodeElement.id;
-            // Create connection if not the same node
-            if (targetId !== this.connectionDrag.sourceNode) {
-                this.createConnection(this.connectionDrag.sourceNode, targetId);
+        // Check if ended over a entity
+        const targetEntityElement = e.target.closest('.diagram-entity');
+        if (targetEntityElement) {
+            const targetId = targetEntityElement.id;
+            // Create connection if not the same entity
+            if (targetId !== this.connectionDrag.sourceEntity) {
+                this.createConnection(this.connectionDrag.sourceEntity, targetId);
             }
         }
         
@@ -713,10 +715,10 @@ class DiagramManager {
         line.setAttribute('y2', y2);
         line.classList.add('diagram-connection', 'temp-connection');
         
-        // Check if source node is dashed to set appropriate style
-        if (this.connectionDrag.sourceNode) {
-            const sourceNode = this.nodes.find(n => n.id === this.connectionDrag.sourceNode);
-            if (sourceNode && sourceNode.isDashed) {
+        // Check if source entity is dashed to set appropriate style
+        if (this.connectionDrag.sourceEntity) {
+            const sourceEntity = this.entities.find(n => n.id === this.connectionDrag.sourceEntity);
+            if (sourceEntity && sourceEntity.isDashed) {
                 line.classList.add('dashed-connection');
             } else {
                 line.classList.add('solid-connection');
@@ -727,23 +729,23 @@ class DiagramManager {
     }
     
     /**
-     * Calculate intersection point between a line from node center to a point,
-     * and the node's edge
+     * Calculate intersection point between a line from entity center to a point,
+     * and the entity's edge
      */
-    calculateNodeIntersection(nodeElement, pointX, pointY) {
+    calculateEntityIntersection(entityElement, pointX, pointY) {
         const diagramRect = this.diagramOverlay.getBoundingClientRect();
-        const nodeRect = nodeElement.getBoundingClientRect();
+        const entityRect = entityElement.getBoundingClientRect();
         
-        // Calculate node center
-        const centerX = nodeRect.left + nodeRect.width / 2 - diagramRect.left;
-        const centerY = nodeRect.top + nodeRect.height / 2 - diagramRect.top;
+        // Calculate entity center
+        const centerX = entityRect.left + entityRect.width / 2 - diagramRect.left;
+        const centerY = entityRect.top + entityRect.height / 2 - diagramRect.top;
         
         // Calculate angle between center and point
         const angle = Math.atan2(pointY - centerY, pointX - centerX);
         
-        // Calculate node half dimensions
-        const halfWidth = nodeRect.width / 2;
-        const halfHeight = nodeRect.height / 2;
+        // Calculate entity half dimensions
+        const halfWidth = entityRect.width / 2;
+        const halfHeight = entityRect.height / 2;
         
         // Determine intersection point
         let intersectX, intersectY, side;
@@ -761,7 +763,7 @@ class DiagramManager {
             side = Math.sin(angle) > 0 ? 'bottom' : 'top';
         }
         
-        return { x: intersectX, y: intersectY, side, nodeRect, diagramRect, centerX, centerY };
+        return { x: intersectX, y: intersectY, side, entityRect, diagramRect, centerX, centerY };
     }
     
     /**
@@ -771,16 +773,16 @@ class DiagramManager {
         const line = document.getElementById('temp-connection');
         if (!line) return;
         
-        // Check if there's a source node to adjust starting point
-        const sourceNode = document.getElementById(this.connectionDrag.sourceNode);
-        if (!sourceNode) return;
+        // Check if there's a source entity to adjust starting point
+        const sourceEntity = document.getElementById(this.connectionDrag.sourceEntity);
+        if (!sourceEntity) return;
         
         // Get current mouse position
         const x2 = this.connectionDrag.currentX;
         const y2 = this.connectionDrag.currentY;
         
-        // Calculate source node intersection
-        const intersection = this.calculateNodeIntersection(sourceNode, x2, y2);
+        // Calculate source entity intersection
+        const intersection = this.calculateEntityIntersection(sourceEntity, x2, y2);
         
         // Set adjusted line attributes
         line.setAttribute('x1', intersection.x);
@@ -788,21 +790,21 @@ class DiagramManager {
         line.setAttribute('x2', x2);
         line.setAttribute('y2', y2);
         
-        // Reset all indicators on this node first
-        const indicators = sourceNode.querySelectorAll('.connection-indicator');
+        // Reset all indicators on this entity first
+        const indicators = sourceEntity.querySelectorAll('.connection-indicator');
         indicators.forEach(indicator => {
             indicator.classList.remove('active');
             indicator.style.opacity = '0';
         });
         
         // Clear all temporary connection points
-        const tempPoints = sourceNode.querySelectorAll('.temp-connection-point');
+        const tempPoints = sourceEntity.querySelectorAll('.temp-connection-point');
         tempPoints.forEach(point => point.remove());
         
         // Calculate position for the indicator (relative position along the edge)
         const position = intersection.side === 'right' || intersection.side === 'left'
-            ? (intersection.y - (intersection.nodeRect.top - intersection.diagramRect.top)) / intersection.nodeRect.height
-            : (intersection.x - (intersection.nodeRect.left - intersection.diagramRect.left)) / intersection.nodeRect.width;
+            ? (intersection.y - (intersection.entityRect.top - intersection.diagramRect.top)) / intersection.entityRect.height
+            : (intersection.x - (intersection.entityRect.left - intersection.diagramRect.left)) / intersection.entityRect.width;
         
         // Create a temporary connection point
         const point = document.createElement('div');
@@ -811,97 +813,97 @@ class DiagramManager {
         point.style.setProperty('--connection-pos', `${position * 100}%`);
         point.style.opacity = '1';
         
-        // Add to the node
-        sourceNode.appendChild(point);
+        // Add to the entity
+        sourceEntity.appendChild(point);
     }
     
     /**
-     * Initialize dragging for a node
+     * Initialize dragging for a entity
      */
-    initializeNodeDragging(nodeElement) {
+    initializeEntityDragging(entityElement) {
         // Clear any existing event listeners (to avoid duplicates)
-        const clone = nodeElement.cloneNode(true);
-        nodeElement.parentNode.replaceChild(clone, nodeElement);
-        nodeElement = clone;
+        const clone = entityElement.cloneNode(true);
+        entityElement.parentNode.replaceChild(clone, entityElement);
+        entityElement = clone;
         
         // Re-attach important event listeners to child elements
-        const deleteBtn = nodeElement.querySelector('.delete-node-btn');
+        const deleteBtn = entityElement.querySelector('.delete-entity-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation(); // Prevent event bubbling
-                this.deleteNode(nodeElement.id);
+                this.deleteEntity(entityElement.id);
             });
         }
         
-        const content = nodeElement.querySelector('.node-content');
+        const content = entityElement.querySelector('.entity-content');
         if (content) {
             content.addEventListener('input', (e) => {
                 // Use innerHTML to capture formatted content including line breaks
-                this.updateNodeContent(nodeElement.id, e.target.innerHTML);
-                this.updateNodeTags(nodeElement.id);
+                this.updateEntityContent(entityElement.id, e.target.innerHTML);
+                this.updateEntityTags(entityElement.id);
             });
             
             // Add explicit mousedown handler to the content to stop propagation
             content.addEventListener('mousedown', (e) => {
-                e.stopPropagation(); // Prevent node dragging when interacting with content
+                e.stopPropagation(); // Prevent entity dragging when interacting with content
             });
         }
         
         // Get drag handle and setup drag handling
-        const dragHandle = nodeElement.querySelector('.note-drag-handle');
+        const dragHandle = entityElement.querySelector('.note-drag-handle');
         
-        // Main node mousedown handler - allow dragging from borders or handle
-        nodeElement.addEventListener('mousedown', (e) => {
+        // Main entity mousedown handler - allow dragging from borders or handle
+        entityElement.addEventListener('mousedown', (e) => {
             // Skip if clicking on content (for editing), delete button, or connection handle
-            // Check if the click target is or is contained within the node-content
-            if (e.target.classList.contains('node-content') || 
-                e.target.closest('.node-content') ||
-                e.target.classList.contains('delete-node-btn') ||
-                e.target.closest('.delete-node-btn') ||  // Also check for child elements of delete button
+            // Check if the click target is or is contained within the entity-content
+            if (e.target.classList.contains('entity-content') || 
+                e.target.closest('.entity-content') ||
+                e.target.classList.contains('delete-entity-btn') ||
+                e.target.closest('.delete-entity-btn') ||  // Also check for child elements of delete button
                 e.target.classList.contains('connection-handle')) {
                 return;
             }
             
-            const nodeId = nodeElement.id;
-            const node = this.nodes.find(n => n.id === nodeId);
+            const entityId = entityElement.id;
+            const entity = this.entities.find(n => n.id === entityId);
             
-            if (!node) return;
+            if (!entity) return;
             
             const rect = this.diagramOverlay.getBoundingClientRect();
             
             this.dragState = {
                 isDragging: true,
-                currentNode: nodeId,
-                initialX: e.clientX - rect.left - node.position.x,
-                initialY: e.clientY - rect.top - node.position.y,
-                xOffset: node.position.x,
-                yOffset: node.position.y
+                currentEntity: entityId,
+                initialX: e.clientX - rect.left - entity.position.x,
+                initialY: e.clientY - rect.top - entity.position.y,
+                xOffset: entity.position.x,
+                yOffset: entity.position.y
             };
             
-            nodeElement.classList.add('dragging');
+            entityElement.classList.add('dragging');
         });
         
         // Add handle for creating connections
         const handle = document.createElement('div');
         handle.className = 'connection-handle';
         handle.setAttribute('title', 'Drag to connect');
-        nodeElement.appendChild(handle);
+        entityElement.appendChild(handle);
         
         // Start connection drag on handle mousedown
         handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
-            const nodeId = nodeElement.id;
+            const entityId = entityElement.id;
             const rect = this.diagramOverlay.getBoundingClientRect();
-            const nodeRect = nodeElement.getBoundingClientRect();
+            const entityRect = entityElement.getBoundingClientRect();
             
-            // Calculate starting point at the edge of the node where the handle is
-            // Using the node's bottom center point for starting point
-            const startX = nodeRect.left + nodeRect.width / 2 - rect.left;
-            const startY = nodeRect.bottom - rect.top;
+            // Calculate starting point at the edge of the entity where the handle is
+            // Using the entity's bottom center point for starting point
+            const startX = entityRect.left + entityRect.width / 2 - rect.left;
+            const startY = entityRect.bottom - rect.top;
             
-            this.startConnectionDrag(nodeId, startX, startY);
+            this.startConnectionDrag(entityId, startX, startY);
         });
     }
     
@@ -917,26 +919,26 @@ class DiagramManager {
         const x = e.clientX - rect.left - this.dragState.initialX;
         const y = e.clientY - rect.top - this.dragState.initialY;
         
-        // Ensure the node element still exists
-        const nodeEl = document.getElementById(this.dragState.currentNode);
-        if (!nodeEl) {
+        // Ensure the entity element still exists
+        const entityEl = document.getElementById(this.dragState.currentEntity);
+        if (!entityEl) {
             this.dragState.isDragging = false;
             return;
         }
         
         // Constrain horizontally to diagram area, but allow vertical freedom
-        const nodeWidth = nodeEl.offsetWidth;
+        const entityWidth = entityEl.offsetWidth;
         
-        const constrainedX = Math.max(0, Math.min(x, rect.width - nodeWidth));
-        // No vertical constraints - allow nodes to be placed anywhere in the scrollable area
+        const constrainedX = Math.max(0, Math.min(x, rect.width - entityWidth));
+        // No vertical constraints - allow entities to be placed anywhere in the scrollable area
         const constrainedY = y;
         
         this.dragState.xOffset = constrainedX;
         this.dragState.yOffset = constrainedY;
         
         // Use absolute positioning instead of transform
-        nodeEl.style.left = `${constrainedX}px`;
-        nodeEl.style.top = `${constrainedY}px`;
+        entityEl.style.left = `${constrainedX}px`;
+        entityEl.style.top = `${constrainedY}px`;
         
         // Update connection lines during drag
         this.updateConnectionsPosition();
@@ -948,13 +950,13 @@ class DiagramManager {
     handleMouseUp() {
         if (!this.dragState.isDragging) return;
         
-        const nodeEl = document.getElementById(this.dragState.currentNode);
-        if (nodeEl) {
-            nodeEl.classList.remove('dragging');
+        const entityEl = document.getElementById(this.dragState.currentEntity);
+        if (entityEl) {
+            entityEl.classList.remove('dragging');
             
             // Save the final position
-            this.updateNodePosition(
-                this.dragState.currentNode,
+            this.updateEntityPosition(
+                this.dragState.currentEntity,
                 this.dragState.xOffset,
                 this.dragState.yOffset
             );
@@ -976,30 +978,30 @@ class DiagramManager {
     }
     
     /**
-     * Draw a connection line between two nodes
+     * Draw a connection line between two entities
      */
     drawConnectionLine(connId, sourceId, targetId) {
-        const sourceNode = document.getElementById(sourceId);
-        const targetNode = document.getElementById(targetId);
+        const sourceEntity = document.getElementById(sourceId);
+        const targetEntity = document.getElementById(targetId);
         const connectionLine = document.getElementById(connId);
         const hitArea = document.getElementById(`hit-${connId}`);
         
-        if (!sourceNode || !targetNode || !connectionLine) return;
+        if (!sourceEntity || !targetEntity || !connectionLine) return;
         
-        // Calculate target center for source node intersection
-        const targetRect = targetNode.getBoundingClientRect();
+        // Calculate target center for source entity intersection
+        const targetRect = targetEntity.getBoundingClientRect();
         const diagramRect = this.diagramOverlay.getBoundingClientRect();
         const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
         const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
         
         // Calculate source intersection point
-        const sourceIntersection = this.calculateNodeIntersection(
-            sourceNode, targetCenterX, targetCenterY
+        const sourceIntersection = this.calculateEntityIntersection(
+            sourceEntity, targetCenterX, targetCenterY
         );
         
         // Calculate target intersection point (using source center)
-        const targetIntersection = this.calculateNodeIntersection(
-            targetNode, sourceIntersection.centerX, sourceIntersection.centerY
+        const targetIntersection = this.calculateEntityIntersection(
+            targetEntity, sourceIntersection.centerX, sourceIntersection.centerY
         );
         
         // Set line attributes
@@ -1018,7 +1020,7 @@ class DiagramManager {
     }
     
     /**
-     * Render the diagram with all nodes and connections
+     * Render the diagram with all entities and connections
      */
     renderDiagram() {
         // Only render if overlay exists
@@ -1033,27 +1035,27 @@ class DiagramManager {
         // Clear existing connections
         connectionsContainer.innerHTML = '';
         
-        // Clear existing nodes
-        const existingNodes = this.diagramOverlay.querySelectorAll('.diagram-node');
-        existingNodes.forEach(node => {
-            if (node !== connectionsContainer) {
-                node.remove();
+        // Clear existing entities
+        const existingEntities = this.diagramOverlay.querySelectorAll('.diagram-entity');
+        existingEntities.forEach(entity => {
+            if (entity !== connectionsContainer) {
+                entity.remove();
             }
         });
         
-        // Create a Map of node IDs to track rendered nodes
-        const nodeElements = new Map();
+        // Create a Map of entity IDs to track rendered entities
+        const entityElements = new Map();
         
-        // Render nodes first
-        this.nodes.forEach(node => {
-            this.renderSingleNode(node);
-            nodeElements.set(node.id, document.getElementById(node.id));
+        // Render entities first
+        this.entities.forEach(entity => {
+            this.renderSingleEntity(entity);
+            entityElements.set(entity.id, document.getElementById(entity.id));
         });
         
-        // Render connections between nodes
+        // Render connections between entities
         this.connections.forEach(conn => {
-            // Verify both nodes exist
-            if (nodeElements.has(conn.source) && nodeElements.has(conn.target)) {
+            // Verify both entities exist
+            if (entityElements.has(conn.source) && entityElements.has(conn.target)) {
                 this.renderSingleConnection(conn);
             }
         });
@@ -1063,11 +1065,11 @@ class DiagramManager {
     }
     
     /**
-     * Add connection indicators to a node
-     * @param {HTMLElement} nodeElement - The node DOM element
+     * Add connection indicators to an entity
+     * @param {HTMLElement} entityElement - The entity DOM element
      */
-    addConnectionIndicators(nodeElement) {
-        // Create indicators for each side of the node
+    addConnectionIndicators(entityElement) {
+        // Create indicators for each side of the entity
         const sides = ['top', 'right', 'bottom', 'left'];
         
         sides.forEach(side => {
@@ -1075,27 +1077,27 @@ class DiagramManager {
             const indicatorContainer = document.createElement('div');
             indicatorContainer.className = `connection-indicator-container ${side}-container`;
             indicatorContainer.setAttribute('data-side', side);
-            nodeElement.appendChild(indicatorContainer);
+            entityElement.appendChild(indicatorContainer);
             
             // Create base indicator
             const indicator = document.createElement('div');
             indicator.className = `connection-indicator ${side}-indicator`;
             indicator.setAttribute('data-side', side);
-            nodeElement.appendChild(indicator);
+            entityElement.appendChild(indicator);
         });
     }
     
     /**
-     * Determine which side of a node a connection point is on
+     * Determine which side of an entity a connection point is on
      */
-    determineConnectionSide(x, y, nodeInfo) {
-        const { centerX, centerY, nodeRect, diagramRect } = nodeInfo;
+    determineConnectionSide(x, y, entityInfo) {
+        const { centerX, centerY, entityRect, diagramRect } = entityInfo;
         
         // Determine side by checking distance to each edge
-        const distanceToRight = Math.abs(x - (centerX + nodeRect.width / 2));
-        const distanceToLeft = Math.abs(x - (centerX - nodeRect.width / 2));
-        const distanceToTop = Math.abs(y - (centerY - nodeRect.height / 2));
-        const distanceToBottom = Math.abs(y - (centerY + nodeRect.height / 2));
+        const distanceToRight = Math.abs(x - (centerX + entityRect.width / 2));
+        const distanceToLeft = Math.abs(x - (centerX - entityRect.width / 2));
+        const distanceToTop = Math.abs(y - (centerY - entityRect.height / 2));
+        const distanceToBottom = Math.abs(y - (centerY + entityRect.height / 2));
         
         const minDistance = Math.min(
             distanceToRight, 
@@ -1111,19 +1113,19 @@ class DiagramManager {
     }
     
     /**
-     * Calculate relative position of a connection point along a node edge
+     * Calculate relative position of a connection point along an entity edge
      */
-    calculateConnectionPosition(x, y, side, nodeRect, diagramRect) {
+    calculateConnectionPosition(x, y, side, entityRect, diagramRect) {
         // Calculate position (0-1) along the edge
         return side === 'right' || side === 'left'
-            ? (y - (nodeRect.top - diagramRect.top)) / nodeRect.height
-            : (x - (nodeRect.left - diagramRect.left)) / nodeRect.width;
+            ? (y - (entityRect.top - diagramRect.top)) / entityRect.height
+            : (x - (entityRect.left - diagramRect.left)) / entityRect.width;
     }
     
     /**
-     * Create a connection point element for a node
+     * Create a connection point element for an entity
      */
-    createConnectionPoint(nodeElement, side, position) {
+    createConnectionPoint(entityElement, side, position) {
         // Create a connection point
         const point = document.createElement('div');
         point.className = `connection-point connection-indicator ${side}-indicator active`;
@@ -1131,8 +1133,8 @@ class DiagramManager {
         point.style.setProperty('--connection-pos', `${position * 100}%`);
         point.style.opacity = '1';
         
-        // Add to the node
-        nodeElement.appendChild(point);
+        // Add to the entity
+        entityElement.appendChild(point);
         
         return point;
     }
@@ -1152,16 +1154,16 @@ class DiagramManager {
         const pointContainers = document.querySelectorAll('.connection-point');
         pointContainers.forEach(container => container.remove());
         
-        // Track connections by node side to handle multiple connections per side
-        const nodeSideConnections = new Map();
+        // Track connections by entity side to handle multiple connections per side
+        const entitySideConnections = new Map();
         
         // Process each connection to collect connection points
         this.connections.forEach(conn => {
-            const sourceNode = document.getElementById(conn.source);
-            const targetNode = document.getElementById(conn.target);
+            const sourceEntity = document.getElementById(conn.source);
+            const targetEntity = document.getElementById(conn.target);
             const connectionLine = document.getElementById(conn.id);
             
-            if (!sourceNode || !targetNode || !connectionLine) return;
+            if (!sourceEntity || !targetEntity || !connectionLine) return;
             
             // Get line coordinates
             const x1 = parseFloat(connectionLine.getAttribute('x1'));
@@ -1169,34 +1171,34 @@ class DiagramManager {
             const x2 = parseFloat(connectionLine.getAttribute('x2'));
             const y2 = parseFloat(connectionLine.getAttribute('y2'));
             
-            // Get node rectangles
+            // Get entity rectangles
             const diagramRect = this.diagramOverlay.getBoundingClientRect();
-            const sourceRect = sourceNode.getBoundingClientRect();
-            const targetRect = targetNode.getBoundingClientRect();
+            const sourceRect = sourceEntity.getBoundingClientRect();
+            const targetRect = targetEntity.getBoundingClientRect();
             
-            // Calculate node centers
+            // Calculate entity centers
             const sourceCenterX = sourceRect.left + sourceRect.width / 2 - diagramRect.left;
             const sourceCenterY = sourceRect.top + sourceRect.height / 2 - diagramRect.top;
             const targetCenterX = targetRect.left + targetRect.width / 2 - diagramRect.left;
             const targetCenterY = targetRect.top + targetRect.height / 2 - diagramRect.top;
             
             // Calculate connection sides
-            const sourceNodeInfo = { centerX: sourceCenterX, centerY: sourceCenterY, nodeRect: sourceRect, diagramRect };
-            const targetNodeInfo = { centerX: targetCenterX, centerY: targetCenterY, nodeRect: targetRect, diagramRect };
+            const sourceEntityInfo = { centerX: sourceCenterX, centerY: sourceCenterY, entityRect: sourceRect, diagramRect };
+            const targetEntityInfo = { centerX: targetCenterX, centerY: targetCenterY, entityRect: targetRect, diagramRect };
             
-            const sourceSide = this.determineConnectionSide(x1, y1, sourceNodeInfo);
-            const targetSide = this.determineConnectionSide(x2, y2, targetNodeInfo);
+            const sourceSide = this.determineConnectionSide(x1, y1, sourceEntityInfo);
+            const targetSide = this.determineConnectionSide(x2, y2, targetEntityInfo);
             
             // Track connection points for source
             const sourceKey = `${conn.source}-${sourceSide}`;
-            if (!nodeSideConnections.has(sourceKey)) {
-                nodeSideConnections.set(sourceKey, []);
+            if (!entitySideConnections.has(sourceKey)) {
+                entitySideConnections.set(sourceKey, []);
             }
             
             const sourcePosition = this.calculateConnectionPosition(x1, y1, sourceSide, sourceRect, diagramRect);
             
-            nodeSideConnections.get(sourceKey).push({
-                nodeId: conn.source,
+            entitySideConnections.get(sourceKey).push({
+                entityId: conn.source,
                 side: sourceSide,
                 position: sourcePosition,
                 x: x1,
@@ -1205,14 +1207,14 @@ class DiagramManager {
             
             // Track connection points for target
             const targetKey = `${conn.target}-${targetSide}`;
-            if (!nodeSideConnections.has(targetKey)) {
-                nodeSideConnections.set(targetKey, []);
+            if (!entitySideConnections.has(targetKey)) {
+                entitySideConnections.set(targetKey, []);
             }
             
             const targetPosition = this.calculateConnectionPosition(x2, y2, targetSide, targetRect, diagramRect);
             
-            nodeSideConnections.get(targetKey).push({
-                nodeId: conn.target,
+            entitySideConnections.get(targetKey).push({
+                entityId: conn.target,
                 side: targetSide,
                 position: targetPosition,
                 x: x2,
@@ -1220,13 +1222,13 @@ class DiagramManager {
             });
         });
         
-        // Create connection points for each node side
-        nodeSideConnections.forEach((connections, key) => {
+        // Create connection points for each entity side
+        entitySideConnections.forEach((connections, key) => {
             connections.forEach(conn => {
-                const node = document.getElementById(conn.nodeId);
-                if (!node) return;
+                const entity = document.getElementById(conn.entityId);
+                if (!entity) return;
                 
-                this.createConnectionPoint(node, conn.side, conn.position);
+                this.createConnectionPoint(entity, conn.side, conn.position);
             });
         });
     }

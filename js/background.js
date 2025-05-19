@@ -36,14 +36,14 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "addDiagramNode",
         parentId: "diagramsCategory",
-        title: "Add Diagram Node",
+        title: "Add Block",
         contexts: ["page"]
     });
     
     chrome.contextMenus.create({
         id: "addDashedNode",
         parentId: "diagramsCategory",
-        title: "Add Dashed Node",
+        title: "Add Dashed Block",
         contexts: ["page"]
     });
 });

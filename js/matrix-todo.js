@@ -29,7 +29,7 @@ class MatrixTodo {
 
         document.body.addEventListener('click', (e) => {
             const isNoteItem = e.target.closest('.note-item');
-            const isDiagramItem = e.target.closest('.diagram-node');
+            const isDiagramItem = e.target.closest('.diagram-block');
             const isDocumentItem = e.target.closest('.document-item');
             const isDeleteBtn = e.target.classList.contains('delete-btn');
             const isContextMenu = e.target.closest('.matrix-context-menu');
@@ -813,7 +813,7 @@ class MatrixTodo {
         document.body.addEventListener('contextmenu', (e) => {
             // Skip if right-clicking on a task item or diagram node
             const taskItem = e.target.closest('.task-item');
-            const diagramNode = e.target.closest('.diagram-node');
+            const diagramNode = e.target.closest('.diagram-block');
             
             if (taskItem || diagramNode) return;
             
@@ -834,8 +834,8 @@ class MatrixTodo {
                 <div class="menu-item" data-action="add-document">ADD DOCUMENT</div>
                 
                 <div class="menu-category">DIAGRAMS</div>
-                <div class="menu-item" data-action="add-diagram-node">ADD DIAGRAM NODE</div>
-                <div class="menu-item" data-action="add-dashed-node">ADD DASHED NODE</div>
+                <div class="menu-item" data-action="add-diagram-block">ADD BLOCK</div>
+                <div class="menu-item" data-action="add-dashed-block">ADD DASHED BLOCK</div>
             `;
             
             // First append menu to get its dimensions
@@ -879,10 +879,10 @@ class MatrixTodo {
                         this.notesManager.addNote(position.x, position.y);
                     } else if (action === 'add-document') {
                         this.documentManager.addDocument(position.x, position.y);
-                    } else if (action === 'add-diagram-node') {
-                        this.diagramManager.createNode(position.x, position.y);
-                    } else if (action === 'add-dashed-node') {
-                        this.diagramManager.createNode(position.x, position.y, true);
+                    } else if (action === 'add-diagram-block') {
+                        this.diagramManager.createEntity(position.x, position.y);
+                    } else if (action === 'add-dashed-block') {
+                        this.diagramManager.createEntity(position.x, position.y, true);
                     }
                     
                     document.body.removeChild(menu);
@@ -915,16 +915,16 @@ class MatrixTodo {
                 } else if (message.action === "addDocument") {
                     // Create document in the center of the screen when triggered from extension
                     this.documentManager.addDocument();
-                } else if (message.action === "addDiagramNode") {
-                    // Create a regular node in the center of the screen
+                } else if (message.action === "addDiagramBlock") {
+                    // Create a regular block in the center of the screen
                     const centerX = window.innerWidth / 2;
                     const centerY = window.innerHeight / 2;
-                    this.diagramManager.createNode(centerX, centerY);
-                } else if (message.action === "addDashedNode") {
-                    // Create a dashed node in the center of the screen
+                    this.diagramManager.createEntity(centerX, centerY);
+                } else if (message.action === "addDashedBlock") {
+                    // Create a dashed block in the center of the screen
                     const centerX = window.innerWidth / 2;
                     const centerY = window.innerHeight / 2;
-                    this.diagramManager.createNode(centerX, centerY, true);
+                    this.diagramManager.createEntity(centerX, centerY, true);
                 }
                 
                 // Make sure to free up the event listener by returning false if not using sendResponse

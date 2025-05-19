@@ -23,6 +23,6 @@
 - problem: document goes out of screen if expanded when it was around the edge: autoamtically reposition it, done 
 
 
-
+- refactor css, done 
 - change calling nodes to another more accurate name 
 - connect to userrr account to backup documents 

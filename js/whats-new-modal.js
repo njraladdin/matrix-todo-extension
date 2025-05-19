@@ -139,8 +139,8 @@ class WhatsNewModal {
                 id: 'diagram-update',
                 title: 'DIAGRAM FEATURE',
                 features: [
-                    'Right-click to create diagram nodes',
-                    'Connect nodes with drag handles',
+                    'Right-click to create diagram blocks',
+                    'Connect blocks with drag handles',
                 ],
                 preview: `
                     <style>
@@ -153,8 +153,8 @@ class WhatsNewModal {
                             overflow: hidden;
                         }
                         
-                        /* Basic styles to make nodes visible in preview */
-                        .preview-diagram-container .diagram-node {
+                        /* Basic styles to make blocks visible in preview */
+                        .preview-diagram-container .diagram-block {
                             position: absolute;
                             width: 120px;
                             height: 60px;
@@ -163,7 +163,7 @@ class WhatsNewModal {
                             box-shadow: 0 0 8px rgba(var(--matrix-green-rgb), 0.4);
                         }
                         
-                        .preview-diagram-container .node-content {
+                        .preview-diagram-container .block-content {
                             height: 100%;
                             width: 100%;
                             display: flex;
@@ -191,13 +191,13 @@ class WhatsNewModal {
                             stroke-dasharray: 5;
                         }
                         
-                        /* Position the nodes */
-                        .diagram-node.node1 {
+                        /* Position the blocks */
+                        .diagram-block.block1 {
                             left: 45px;
                             top: 40px;
                         }
                         
-                        .diagram-node.node2 {
+                        .diagram-block.block2 {
                             right: 45px;
                             top: 100px;
                         }
@@ -206,11 +206,11 @@ class WhatsNewModal {
                         <svg class="connections-container">
                             <line class="diagram-connection" x1="90" y1="70" x2="220" y2="130" />
                         </svg>
-                        <div class="diagram-node node1">
-                            <div class="node-content">TASK</div>
+                        <div class="diagram-block block1">
+                            <div class="block-content">TASK</div>
                         </div>
-                        <div class="diagram-node node2">
-                            <div class="node-content">NOTE</div>
+                        <div class="diagram-block block2">
+                            <div class="block-content">NOTE</div>
                         </div>
                     </div>
                 `
