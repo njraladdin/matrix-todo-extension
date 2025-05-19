@@ -27,4 +27,4 @@
 - change calling nodes to another more accurate name, done 
 - add user auth, done 
 
-- backup data to firestore
+- backup data to firestore, done 

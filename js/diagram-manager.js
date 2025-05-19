@@ -1,7 +1,9 @@
+import { saveData, loadData } from './storage.js';
+
 class DiagramManager {
     constructor() {
-        this.entities = JSON.parse(localStorage.getItem('matrix-diagram-entities')) || [];
-        this.connections = JSON.parse(localStorage.getItem('matrix-diagram-connections')) || [];
+        this.entities = loadData('matrix-diagram-entities', []);
+        this.connections = loadData('matrix-diagram-connections', []);
         this.diagramOverlay = document.querySelector('.diagram-overlay');
         
         // Calculate the next entity ID based on existing entities
@@ -91,27 +93,23 @@ class DiagramManager {
      * Save state to localStorage
      */
     saveState() {
-        // Make sure we're only saving what's necessary
-        // Create clean copies of data without any potential circular references
         const cleanEntities = this.entities.map(entity => ({
             id: entity.id,
             type: entity.type,
-            content: entity.content, // This now contains HTML with preserved line breaks
+            content: entity.content,
             position: {
                 x: entity.position.x,
                 y: entity.position.y
             },
-            isDashed: entity.isDashed // Include isDashed property to persist style
+            isDashed: entity.isDashed
         }));
-        
         const cleanConnections = this.connections.map(conn => ({
             id: conn.id,
             source: conn.source,
             target: conn.target
         }));
-        
-        localStorage.setItem('matrix-diagram-entities', JSON.stringify(cleanEntities));
-        localStorage.setItem('matrix-diagram-connections', JSON.stringify(cleanConnections));
+        saveData('matrix-diagram-entities', cleanEntities);
+        saveData('matrix-diagram-connections', cleanConnections);
     }
     
     /**

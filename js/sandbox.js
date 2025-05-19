@@ -114,6 +114,34 @@ db.collection("tasks").limit(3).get().then(snapshot => {
     console.error("TEST QUERY - Error:", error);
 });
 
+let currentUser = null;
+
+// Helper to save user data to Firestore
+async function saveUserDataToFirestore(uid, key, value) {
+    try {
+        const userDocRef = db.collection('users').doc(uid);
+        // Use dot notation for nested fields: data.key
+        const updateObj = {};
+        updateObj[`data.${key}`] = value;
+        await userDocRef.set(updateObj, { merge: true });
+        console.log(`✅ Saved data for user ${uid}, key: ${key}`);
+    } catch (error) {
+        console.error('❌ Error saving user data to Firestore:', error);
+    }
+}
+
+// Listen for saveData messages from the main app
+window.addEventListener('message', async (event) => {
+    if (!event.data || !event.data.type) return;
+    if (event.data.type === 'saveData') {
+        if (currentUser && currentUser.uid) {
+            await saveUserDataToFirestore(currentUser.uid, event.data.key, event.data.value);
+        } else {
+            console.log('User not authenticated, skipping Firestore save for', event.data.key);
+        }
+    }
+});
+
 // --- Firebase Auth Integration ---
 if (firebase.auth) {
     const auth = firebase.auth();
@@ -136,6 +164,7 @@ if (firebase.auth) {
     auth.onAuthStateChanged((user) => {
         if (user !== lastUser) {
             lastUser = user;
+            currentUser = user;
             sendAuthState(user);
         }
     });

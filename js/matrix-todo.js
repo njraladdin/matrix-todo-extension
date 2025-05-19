@@ -4,6 +4,7 @@ import TaskManager from './task-manager.js';
 import NotesManager from './notes-manager.js';
 import DiagramManager from './diagram-manager.js';
 import DocumentManager from './document-manager.js';
+import { saveData, loadData } from './storage.js';
 
 class MatrixTodo {
     constructor() {
@@ -106,7 +107,7 @@ class MatrixTodo {
         });
 
         this.globalToggle = document.getElementById('globalTodosToggle');
-        this.isGlobalEnabled = localStorage.getItem('globalTodosEnabled') !== 'false';
+        this.isGlobalEnabled = loadData('globalTodosEnabled', true) !== false;
         this.globalToggle.checked = this.isGlobalEnabled;
         
         if (!this.isGlobalEnabled) {
@@ -115,7 +116,7 @@ class MatrixTodo {
 
         this.globalToggle.addEventListener('change', (e) => {
             this.isGlobalEnabled = e.target.checked;
-            localStorage.setItem('globalTodosEnabled', this.isGlobalEnabled);
+            saveData('globalTodosEnabled', this.isGlobalEnabled);
             
             if (this.isGlobalEnabled) {
                 this.globalTodosContainer.style.display = 'block';
@@ -166,10 +167,10 @@ class MatrixTodo {
 
         // Initialize task history
         this.taskHistory = {};
-        const savedHistory = localStorage.getItem('matrix-tasks-history');
+        const savedHistory = loadData('matrix-tasks-history', null);
         if (savedHistory) {
             try {
-                this.taskHistory = JSON.parse(savedHistory);
+                this.taskHistory = savedHistory;
             } catch (e) {
                 console.error('Error parsing task history:', e);
                 this.taskHistory = {};

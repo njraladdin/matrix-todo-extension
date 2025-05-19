@@ -1,3 +1,5 @@
+import { saveData, loadData } from './storage.js';
+
 class WhatsNewModal {
     constructor() {
         this.updates = {
@@ -728,21 +730,16 @@ class WhatsNewModal {
     }
 
     checkForUpdates() {
-        // Get seen updates from localStorage
-        const seenUpdates = JSON.parse(localStorage.getItem('matrix-todo-seen-updates') || '{}');
-        
+        // Get seen updates from storage
+        const seenUpdates = loadData('matrix-todo-seen-updates', {});
         // Find all unseen updates
         const unseenUpdates = Object.values(this.updates).filter(update => !seenUpdates[update.id]);
-        
         if (unseenUpdates.length > 0) {
-            // Show the full What's New modal with all updates when new ones are available
             this.showWhatsNewModal();
-            
-            // Mark all updates as seen
             unseenUpdates.forEach(update => {
                 seenUpdates[update.id] = true;
             });
-            localStorage.setItem('matrix-todo-seen-updates', JSON.stringify(seenUpdates));
+            saveData('matrix-todo-seen-updates', seenUpdates);
         }
     }
 

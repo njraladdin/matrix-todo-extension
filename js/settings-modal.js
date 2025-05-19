@@ -1,3 +1,5 @@
+import { saveData } from './storage.js';
+
 class SettingsModal {
     constructor(matrixTodo) {
         this.matrixTodo = matrixTodo; // Reference to the main app
@@ -87,7 +89,7 @@ class SettingsModal {
                 this.taskHistory[date] = [];
             }
             this.taskHistory[date].push(task);
-            localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
+            saveData('matrix-tasks-history', this.taskHistory);
         } catch (e) {
             console.error('Error adding task to history:', e);
         }
@@ -95,7 +97,7 @@ class SettingsModal {
     
     clearHistory() {
         this.taskHistory = {};
-        localStorage.setItem('matrix-tasks-history', JSON.stringify(this.taskHistory));
+        saveData('matrix-tasks-history', this.taskHistory);
         this.renderHistory();
     }
 }

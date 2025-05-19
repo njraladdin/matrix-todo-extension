@@ -1,6 +1,8 @@
+import { saveData, loadData } from './storage.js';
+
 class DocumentManager {
     constructor() {
-        this.documents = JSON.parse(localStorage.getItem('matrix-documents')) || [];
+        this.documents = loadData('matrix-documents', []);
         this.documentsOverlay = document.querySelector('.documents-overlay');
         // Store original positions for documents that are repositioned when expanded
         this.originalPositions = {};
@@ -259,7 +261,7 @@ class DocumentManager {
      * Save documents to localStorage
      */
     saveDocuments() {
-        localStorage.setItem('matrix-documents', JSON.stringify(this.documents));
+        saveData('matrix-documents', this.documents);
     }
 
     /**

@@ -1,6 +1,8 @@
+import { saveData, loadData } from './storage.js';
+
 class NotesManager {
     constructor() {
-        this.notes = JSON.parse(localStorage.getItem('matrix-notes')) || [];
+        this.notes = loadData('matrix-notes', []);
         this.notesOverlay = document.querySelector('.notes-overlay');
     }
 
@@ -85,7 +87,7 @@ class NotesManager {
      * Save notes to localStorage
      */
     saveNotes() {
-        localStorage.setItem('matrix-notes', JSON.stringify(this.notes));
+        saveData('matrix-notes', this.notes);
     }
 
     /**

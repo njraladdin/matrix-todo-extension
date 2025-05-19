@@ -1,7 +1,9 @@
+import { saveData, loadData } from './storage.js';
+
 class TaskManager {
     constructor() {
-        this.tasks = JSON.parse(localStorage.getItem('matrix-tasks')) || [];
-        this.currentTaskId = localStorage.getItem('matrix-current-task') || null;
+        this.tasks = loadData('matrix-tasks', []);
+        this.currentTaskId = loadData('matrix-current-task', null);
         
         // Clean up any existing empty tasks
         this.cleanupEmptyTasks();
@@ -91,7 +93,7 @@ class TaskManager {
         }
         
         this.currentTaskId = taskId;
-        localStorage.setItem('matrix-current-task', taskId);
+        saveData('matrix-current-task', taskId);
     }
 
     /**
@@ -137,7 +139,7 @@ class TaskManager {
      * Save tasks to localStorage
      */
     saveTasks() {
-        localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+        saveData('matrix-tasks', this.tasks);
     }
 
     /**
@@ -224,7 +226,7 @@ class TaskManager {
         
         if (this.tasks.length !== originalLength) {
             console.log(`Cleaned up ${originalLength - this.tasks.length} empty tasks`);
-            localStorage.setItem('matrix-tasks', JSON.stringify(this.tasks));
+            saveData('matrix-tasks', this.tasks);
         }
     }
 }

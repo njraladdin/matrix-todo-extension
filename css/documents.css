@@ -35,13 +35,6 @@
     border-radius: 8px 8px 0 0;
 }
 
-.document-item[data-dragging="true"] {
-    box-shadow: 
-        0 0 30px rgba(var(--matrix-green-rgb), 0.15),
-        0 0 20px rgba(0, 0, 0, 0.3),
-        inset 0 0 2px rgba(var(--matrix-green-rgb), 0.1);
-}
-
 .document-item:hover {
     box-shadow: 
         0 0 20px rgba(0, 0, 0, 0.3),
