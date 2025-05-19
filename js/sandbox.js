@@ -74,35 +74,7 @@ window.addEventListener("message", async (event) => {
             console.error("Error adding task:", error);
         }
     } 
-    // REMOVED: getTasks handler to avoid fetching all tasks from Firebase
-    // else if (event.data.type === "getTasks") {
-    //     console.log("Fetching all tasks...");
-    //     try {
-    //         const snapshot = await db.collection("tasks")
-    //             .orderBy("timestamp", "desc")
-    //             .get();
-    //
-    //         console.log("Snapshot size:", snapshot.size);
-    //         const tasks = [];
-    //         snapshot.forEach((doc) => {
-    //             const data = doc.data();
-    //             console.log("Document data:", data);
-    //             tasks.push({ 
-    //                 id: doc.id, 
-    //                 ...data,
-    //                 timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
-    //             });
-    //         });
-    //
-    //         console.log("Tasks array before sending:", tasks);
-    //         window.parent.postMessage({ 
-    //             type: "tasksLoaded", 
-    //             tasks 
-    //         }, "*");
-    //     } catch (error) {
-    //         console.error("Error fetching tasks:", error);
-    //     }
-    // }
+
 });
 
 // Add this to test postMessage
@@ -124,7 +96,6 @@ db.collection("tasks").limit(1).get()
 
 // Add this to verify the message handler is set up
 console.log("🎮 Message event listener installed");
-
 // Test the message handler immediately
 setTimeout(() => {
     console.log("🧪 Testing message handler directly");
