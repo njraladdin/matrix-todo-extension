@@ -187,7 +187,11 @@ class NotesManager {
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const noteId = e.target.closest('.note-item').dataset.id;
-                this.deleteNote(noteId);
+                const note = this.notes.find(n => n.id === noteId);
+                // Only confirm deletion if the note has content
+                if (!note.content || note.content.trim() === '' || confirm('Delete this note?')) {
+                    this.deleteNote(noteId);
+                }
             });
         });
     }
