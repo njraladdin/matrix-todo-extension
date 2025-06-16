@@ -28,4 +28,5 @@
 - add user auth, done 
 
 - backup data to firestore, done 
-- import data from firestore
+- import data from firestore, done 
+- test data saving nad data import, publish in chrome web store 
