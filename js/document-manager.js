@@ -31,7 +31,7 @@ class DocumentManager {
         const scrollY = window.pageYOffset || document.documentElement.scrollTop;
         const posY = y !== undefined ? y - (docHeight / 2) : scrollY + (viewportHeight - docHeight) / 2;
         
-        const document = {
+        const newDocument = {
             id: Date.now().toString(),
             title: 'UNTITLED DOCUMENT',
             content: '',
@@ -43,12 +43,12 @@ class DocumentManager {
             isExpanded: true // Start expanded by default
         };
         
-        this.documents.unshift(document);
+        this.documents.unshift(newDocument);
         this.saveDocuments();
         this.renderDocuments();
         
         // Return the document so the caller can focus it if needed
-        return document;
+        return newDocument;
     }
 
     /**
