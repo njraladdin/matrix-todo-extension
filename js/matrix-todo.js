@@ -670,15 +670,15 @@ class MatrixTodo {
             this.ghostTextElement.textContent = inputText + 't';
         } else if (inputText && !inputText.includes('!urgent') && !inputText.includes('#')) {
             // Show both suggestions if neither exists
-            const suggestion = inputText.endsWith(' ') ? '!urgent #<group_name>' : ' !urgent #<group_name>';
+            const suggestion = ' !urgent #<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else if (inputText && !inputText.includes('!urgent')) {
             // Show only !urgent if # exists but !urgent doesn't
-            const suggestion = inputText.endsWith(' ') ? '!urgent' : ' !urgent';
+            const suggestion = ' !urgent';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else if (inputText && !inputText.includes('#')) {
             // Show only #<group_name> if !urgent exists but # doesn't
-            const suggestion = inputText.endsWith(' ') ? '#<group_name>' : ' #<group_name>';
+            const suggestion = ' #<group_name>';
             this.ghostTextElement.textContent = inputText + suggestion;
         } else {
             this.ghostTextElement.textContent = '';

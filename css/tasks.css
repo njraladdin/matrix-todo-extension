@@ -2,16 +2,18 @@
 
 .task-input {
     width: 100%;
-    background: black;
+    background: transparent;
     color: var(--matrix-green);
     border: none;
     outline: none;
-    font-size: 24px;
+    font-size: 28px;
     padding: 0;
-    margin-bottom: 0;
+    margin: 0;
+    line-height: 1;
+    font-family: monospace;
+    box-sizing: border-box;
     position: relative;
     z-index: 1;
-    background: transparent;
     text-shadow: 
         0 0 2px rgba(var(--matrix-green-rgb), 0.9),
         0 0 4px rgba(var(--matrix-green-rgb), 0.7),
@@ -73,9 +75,7 @@
 @media (min-width: 640px) {
     .task-input,
     .task-item,
-    .delete-btn {
-        font-size: 28px;
-    }
+    .delete-btn,
     .ghost-text {
         font-size: 28px;
     }
@@ -87,10 +87,18 @@
     left: 0;
     opacity: 0.5;
     pointer-events: none;
-    font-size: 24px;
+    font-size: 28px;
+    font-family: monospace;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-sizing: border-box;
     z-index: 0;
     width: 100%;
-    padding: inherit;
+    color: var(--matrix-green);
+    background: transparent;
+    white-space: pre;
 }
 
 .input-wrapper {
