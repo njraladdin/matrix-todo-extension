@@ -75,6 +75,61 @@ class DocumentManager {
     }
 
     /**
+     * Process text replacements like @today -> current date
+     * @param {string} text - The text to process
+     * @returns {string} The processed text
+     */
+    processTextReplacements(text) {
+        // Replace @today with current date in YYYY-MM-DD format
+        if (text.includes('@today')) {
+            const today = new Date();
+            const dateString = today.getFullYear() + '-' + 
+                             String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                             String(today.getDate()).padStart(2, '0');
+            return text.replace(/@today/g, dateString);
+        }
+        return text;
+    }
+
+    /**
+     * Updates a document's content with text replacements
+     * @param {string} id - Document ID
+     * @param {string} content - New content
+     * @param {HTMLTextAreaElement} textarea - The textarea element (optional)
+     */
+    updateDocumentContentWithReplacements(id, content, textarea = null) {
+        const processedContent = this.processTextReplacements(content);
+        
+        // If content was changed by replacements, update the textarea and cursor position
+        if (processedContent !== content && textarea) {
+            // Store cursor position before replacement
+            const cursorPos = textarea.selectionStart;
+            const textBeforeCursor = content.substring(0, cursorPos);
+            const processedTextBeforeCursor = this.processTextReplacements(textBeforeCursor);
+            
+            // Calculate new cursor position after replacement
+            const cursorOffset = processedTextBeforeCursor.length - textBeforeCursor.length;
+            const newCursorPos = cursorPos + cursorOffset;
+            
+            // Update textarea value
+            textarea.value = processedContent;
+            
+            // Restore cursor position
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Adjust height after content change
+            this.adjustTextareaHeight(textarea);
+        }
+        
+        // Update the document content
+        const doc = this.documents.find(d => d.id === id);
+        if (doc) {
+            doc.content = processedContent;
+            this.saveDocuments();
+        }
+    }
+
+    /**
      * Updates a document's content
      * @param {string} id - Document ID
      * @param {string} content - New content
@@ -382,7 +437,7 @@ class DocumentManager {
 
             textarea.addEventListener('input', (e) => {
                 const docId = e.target.closest('.document-item').dataset.id;
-                this.updateDocumentContent(docId, e.target.value);
+                this.updateDocumentContentWithReplacements(docId, e.target.value, e.target);
                 // Adjust height on input
                 this.adjustTextareaHeight(e.target);
             });
